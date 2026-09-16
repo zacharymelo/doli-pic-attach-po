@@ -370,6 +370,27 @@ class RfqImagesService
 	}
 
 	/**
+	 * Heading shown above the links: the text from setup, the translated default when blank,
+	 * or nothing when the heading is switched off
+	 *
+	 * @return string
+	 */
+	public static function getLinksTitle()
+	{
+		global $langs;
+
+		if (getDolGlobalString('RFQIMAGES_LINKS_SHOW_TITLE', '1') === '0') {
+			return '';
+		}
+		$custom = trim(getDolGlobalString('RFQIMAGES_LINKS_TITLE'));
+		if ($custom !== '') {
+			return $custom;
+		}
+		$langs->load('rfqimages@rfqimages');
+		return $langs->transnoentities('RfqImagesLinksTitle');
+	}
+
+	/**
 	 * Links block for the email body, grouped by product ref
 	 *
 	 * @param  array<int,array{name:string,productref:string,url:string}> $links Links
@@ -390,8 +411,10 @@ class RfqImagesService
 			$byref[$l['productref']][] = $l;
 		}
 
+		$title = self::getLinksTitle();
+
 		if ($html) {
-			$out = '<p><strong>'.dol_escape_htmltag($langs->transnoentities('RfqImagesLinksTitle')).'</strong></p><ul>';
+			$out = ($title !== '' ? '<p><strong>'.dol_escape_htmltag($title).'</strong></p>' : '').'<ul>';
 			foreach ($byref as $ref => $items) {
 				$out .= '<li>'.dol_escape_htmltag($ref).'<ul>';
 				foreach ($items as $l) {
@@ -402,7 +425,7 @@ class RfqImagesService
 			return $out.'</ul>';
 		}
 
-		$out = $langs->transnoentities('RfqImagesLinksTitle')."\n";
+		$out = ($title !== '' ? $title."\n" : '');
 		foreach ($byref as $ref => $items) {
 			$out .= $ref."\n";
 			foreach ($items as $l) {

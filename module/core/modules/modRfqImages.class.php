@@ -63,6 +63,7 @@ class modRfqImages extends DolibarrModules
 			array('RFQIMAGES_MAX_ATTACH_MB', 'chaine', '10', 'Above this total size (MB), share links are used instead of attachments', 0, 'current', 0),
 			array('RFQIMAGES_ON_SUPPLIER_PROPOSAL', 'chaine', '1', 'Send product images with price request emails', 0, 'current', 0),
 			array('RFQIMAGES_ON_SUPPLIER_ORDER', 'chaine', '1', 'Send product images with purchase order emails', 0, 'current', 0),
+			array('RFQIMAGES_LINKS_SHOW_TITLE', 'chaine', '1', 'Show a heading above share links', 0, 'current', 0),
 		);
 
 		$this->tabs = array();

@@ -21,6 +21,10 @@ RfqImagesAttached = %s product file(s) attached
 RfqImagesLinked = %s product file(s) are too large to attach (total %s): share links will be added to the message when it is sent
 RfqImagesSomeFailed = Some product files could not be added
 RfqImagesLinksTitle = Product files:
+RfqImagesLinksShowTitle = Heading above links
+RfqImagesLinksShowTitleDesc = Show a line of text before the list of share links in the email
+RfqImagesLinksTitleSetting = Heading text
+RfqImagesLinksTitleSettingDesc = Text shown before the share links. Leave blank to use the default ("Product files:", translated to the email language).
 RfqImagesLinksKeyDesc = Share links to the flagged product files (created when the email is sent)
 
 # Setup

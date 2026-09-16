@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Setup: heading text shown before the share links (blank = translated default "Product files:"), and a switch to hide the heading.
+
 ## 1.3.0 — 2026-09-16
 - `__RFQIMAGES_LINKS__` is back and now always works: wherever it appears in a price request or purchase order email, it is replaced with share links when the email is sent. Files are still attached as usual, so a template can include both.
 - The key is listed in the email template editor. In an open email form it stays visible as `__RFQIMAGES_LINKS__` until you send; share links are only created at send.

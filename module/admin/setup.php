@@ -45,7 +45,7 @@ $action = GETPOST('action', 'aZ09');
 
 // Upgrades from 1.0.0 without re-enabling: these new settings default to on, create them so the toggles show it.
 // Their toggles store 0 when switched off (instead of deleting), so this never switches them back on.
-foreach (array('RFQIMAGES_ON_SUPPLIER_PROPOSAL', 'RFQIMAGES_ON_SUPPLIER_ORDER') as $constname) {
+foreach (array('RFQIMAGES_ON_SUPPLIER_PROPOSAL', 'RFQIMAGES_ON_SUPPLIER_ORDER', 'RFQIMAGES_LINKS_SHOW_TITLE') as $constname) {
 	if (!isset($conf->global->$constname)) {
 		dolibarr_set_const($db, $constname, '1', 'chaine', 0, '', $conf->entity);
 	}
@@ -65,6 +65,14 @@ if ($action == 'update_extensions') {
 		}
 	}
 	dolibarr_set_const($db, 'RFQIMAGES_EXTENSIONS', implode(',', array_unique($exts)), 'chaine', 0, '', $conf->entity);
+	setEventMessages($langs->trans('SetupSaved'), null, 'mesgs');
+	header('Location: '.$_SERVER['PHP_SELF']);
+	exit;
+}
+
+if ($action == 'update_linkstitle') {
+	// Blank deletes the setting, which means the translated default heading
+	dolibarr_set_const($db, 'RFQIMAGES_LINKS_TITLE', trim(GETPOST('RFQIMAGES_LINKS_TITLE', 'alphanohtml')), 'chaine', 0, '', $conf->entity);
 	setEventMessages($langs->trans('SetupSaved'), null, 'mesgs');
 	header('Location: '.$_SERVER['PHP_SELF']);
 	exit;
@@ -134,6 +142,20 @@ print '<input type="number" step="0.01" min="0" name="RFQIMAGES_MAX_ATTACH_MB" v
 print ' <input type="submit" class="button smallpaddingimp" value="'.$langs->trans('Save').'">';
 print '</form>';
 print '</td><td class="opacitymedium">'.$langs->trans('RfqImagesMaxAttachDesc').'</td></tr>';
+
+// Links heading
+print '<tr class="oddeven"><td>'.$langs->trans('RfqImagesLinksShowTitle').'</td>';
+print '<td>'.ajax_constantonoff('RFQIMAGES_LINKS_SHOW_TITLE', array(), null, 0, 0, 0, 2, 0, 1).'</td>';
+print '<td class="opacitymedium">'.$langs->trans('RfqImagesLinksShowTitleDesc').'</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans('RfqImagesLinksTitleSetting').'</td><td>';
+print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="margin:0;">';
+print '<input type="hidden" name="token" value="'.newToken().'">';
+print '<input type="hidden" name="action" value="update_linkstitle">';
+print '<input type="text" class="minwidth300" maxlength="255" name="RFQIMAGES_LINKS_TITLE" value="'.dol_escape_htmltag(getDolGlobalString('RFQIMAGES_LINKS_TITLE')).'" placeholder="'.dol_escape_htmltag($langs->transnoentities('RfqImagesLinksTitle')).'">';
+print ' <input type="submit" class="button smallpaddingimp" value="'.$langs->trans('Save').'">';
+print '</form>';
+print '</td><td class="opacitymedium">'.$langs->trans('RfqImagesLinksTitleSettingDesc').'</td></tr>';
 
 // Debug mode (always last)
 print '<tr class="oddeven"><td>'.$langs->trans('DebugMode').'</td>';
