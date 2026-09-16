@@ -33,6 +33,12 @@ class RfqImagesService
 	/** @var string[] */
 	public $errors = array();
 
+	/** @var string Scheduled job output */
+	public $output = '';
+
+	/** @var array<int,int>|null Flagged category ids, computed once per instance */
+	private $flaggedCategoryIds = null;
+
 	/**
 	 * Constructor
 	 *
@@ -50,15 +56,110 @@ class RfqImagesService
 	 */
 	public static function getExtensions()
 	{
-		$raw = getDolGlobalString('RFQIMAGES_EXTENSIONS', 'jpg,jpeg,png,gif,webp');
+		return self::cleanExtensions(explode(',', getDolGlobalString('RFQIMAGES_EXTENSIONS', 'jpg,jpeg,png,gif,webp')));
+	}
+
+	/**
+	 * Extensions offered in setup, grouped for display
+	 *
+	 * @return array<string,string[]> group label key => extensions
+	 */
+	public static function knownExtensions()
+	{
+		return array(
+			'RfqImagesExtGroupImages' => array('jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tif', 'tiff', 'svg', 'heic'),
+			'RfqImagesExtGroupDocuments' => array('pdf', 'doc', 'docx', 'xls', 'xlsx', 'odt', 'ods', 'txt', 'csv'),
+			'RfqImagesExtGroupCad' => array('dwg', 'dxf', 'step', 'stp', 'iges', 'igs', 'stl', '3mf', 'obj'),
+			'RfqImagesExtGroupArchives' => array('zip', '7z'),
+		);
+	}
+
+	/**
+	 * Normalize a list of extensions: lowercase, no dot, alphanumeric, unique
+	 *
+	 * @param  string[] $list Raw extensions
+	 * @return string[]
+	 */
+	public static function cleanExtensions($list)
+	{
 		$exts = array();
-		foreach (explode(',', $raw) as $ext) {
-			$ext = strtolower(trim(ltrim(trim($ext), '.')));
-			if ($ext !== '' && preg_match('/^[a-z0-9]+$/', $ext)) {
+		foreach ($list as $ext) {
+			$ext = strtolower(trim(ltrim(trim((string) $ext), '.')));
+			if ($ext !== '' && preg_match('/^[a-z0-9]{1,10}$/', $ext)) {
 				$exts[] = $ext;
 			}
 		}
 		return array_values(array_unique($exts));
+	}
+
+	/**
+	 * Product category ids selected in setup, expanded with all their subcategories
+	 *
+	 * @return array<int,int> category id => selected ancestor id
+	 */
+	public function getFlaggedCategoryIds()
+	{
+		if ($this->flaggedCategoryIds === null) {
+			$this->flaggedCategoryIds = $this->loadFlaggedCategoryIds();
+		}
+		return $this->flaggedCategoryIds;
+	}
+
+	/**
+	 * Expand the categories selected in setup with all their subcategories
+	 *
+	 * @return array<int,int> category id => selected ancestor id
+	 */
+	private function loadFlaggedCategoryIds()
+	{
+		$ids = array();
+		$selected = array_filter(array_map('intval', explode(',', getDolGlobalString('RFQIMAGES_CATEGORIES'))));
+		if (empty($selected) || !isModEnabled('category')) {
+			return $ids;
+		}
+		require_once DOL_DOCUMENT_ROOT.'/categories/class/categorie.class.php';
+		$cat = new Categorie($this->db);
+		$arbo = $cat->get_full_arbo(Categorie::TYPE_PRODUCT);
+		if (!is_array($arbo)) {
+			return $ids;
+		}
+		foreach ($arbo as $c) {
+			// fullpath is like _3_12_40: the category and all its ancestors
+			foreach (array_filter(array_map('intval', explode('_', (string) $c['fullpath']))) as $ancestor) {
+				if (in_array($ancestor, $selected, true)) {
+					$ids[(int) $c['id']] = $ancestor;
+					break;
+				}
+			}
+		}
+		return $ids;
+	}
+
+	/**
+	 * Why a product's files are sent: 'product' (its own switch), a category label, or '' (not flagged)
+	 *
+	 * @param  Product $product Product (optionals fetched)
+	 * @return string
+	 */
+	public function getFlagSource($product)
+	{
+		if (!empty($product->array_options['options_rfqimages_send'])) {
+			return 'product';
+		}
+		$flaggedcats = $this->getFlaggedCategoryIds();
+		if (empty($flaggedcats)) {
+			return '';
+		}
+		require_once DOL_DOCUMENT_ROOT.'/categories/class/categorie.class.php';
+		$cat = new Categorie($this->db);
+		$ids = $cat->containing($product->id, Categorie::TYPE_PRODUCT, 'id');
+		foreach ((array) $ids as $id) {
+			if (isset($flaggedcats[(int) $id])) {
+				$selected = new Categorie($this->db);
+				return ($selected->fetch($flaggedcats[(int) $id]) > 0) ? $selected->label : '#'.$flaggedcats[(int) $id];
+			}
+		}
+		return '';
 	}
 
 	/**
@@ -101,6 +202,8 @@ class RfqImagesService
 		$filter = '\.('.implode('|', array_map('preg_quote', $exts)).')$';
 
 		$choices = $this->getChoices($product->id);
+		// Files never ticked or unticked on the product tab follow the setup default
+		$default = (getDolGlobalString('RFQIMAGES_NEW_FILES_INCLUDED', '1') === '0') ? 0 : 1;
 
 		$out = array();
 		// Top level only: skips thumbs/ and other subfolders
@@ -110,7 +213,7 @@ class RfqImagesService
 				'name' => $f['name'],
 				'size' => (int) $f['size'],
 				'mime' => dol_mimetype($f['name']),
-				'selected' => isset($choices[$f['name']]) ? (int) $choices[$f['name']] : 1,
+				'selected' => isset($choices[$f['name']]) ? (int) $choices[$f['name']] : $default,
 				'productref' => $product->ref,
 				'fk_product' => (int) $product->id,
 			);
@@ -119,14 +222,14 @@ class RfqImagesService
 	}
 
 	/**
-	 * Files to send for a product: none unless the product is flagged, then only selected ones
+	 * Files to send for a product: none unless the product is flagged (itself or by category), then only selected ones
 	 *
 	 * @param  Product $product Product (optionals fetched)
 	 * @return array<int,array{fullpath:string,name:string,size:int,mime:string,selected:int,productref:string,fk_product:int}>
 	 */
 	public function getEligibleFiles($product)
 	{
-		if (empty($product->array_options['options_rfqimages_send'])) {
+		if ($this->getFlagSource($product) === '') {
 			return array();
 		}
 		return array_values(array_filter($this->listCandidateFiles($product), function ($f) {
@@ -247,7 +350,7 @@ class RfqImagesService
 	 *
 	 * @param  array{fullpath:string,name:string,productref:string} $file File entry
 	 * @param  User                                                 $user Current user
-	 * @return array{path:string,name:string}|null                        Null on failure
+	 * @return array{path:string,name:string,size:int}|null               Null on failure
 	 */
 	public function copyToMailTemp($file, $user)
 	{
@@ -260,11 +363,43 @@ class RfqImagesService
 		}
 		$name = dol_sanitizeFileName($file['productref'].'_'.$file['name']);
 		$dest = $tmpdir.'/'.$name;
-		if (dol_copy($file['fullpath'], $dest, '0', 1) < 0) {
+		if (!$this->writeResizedCopy($file['fullpath'], $dest) && dol_copy($file['fullpath'], $dest, '0', 1) < 0) {
 			$this->errors[] = 'Cannot copy '.$file['name'];
 			return null;
 		}
-		return array('path' => $dest, 'name' => $name);
+		clearstatcache(true, $dest);
+		return array('path' => $dest, 'name' => $name, 'size' => (int) dol_filesize($dest));
+	}
+
+	/**
+	 * Write a smaller copy of an image when setup limits the size and the image is larger.
+	 * Only jpg/png/gif, and only when this PHP can read and write them; otherwise the caller copies the original.
+	 *
+	 * @param  string $src  Original file
+	 * @param  string $dest Copy to write
+	 * @return bool         True if a resized copy was written
+	 */
+	public function writeResizedCopy($src, $dest)
+	{
+		$max = (int) getDolGlobalString('RFQIMAGES_RESIZE_MAX_PX', '0');
+		if ($max <= 0) {
+			return false;
+		}
+		$ext = strtolower(pathinfo($src, PATHINFO_EXTENSION));
+		$gd = array('jpg' => 'imagecreatefromjpeg', 'jpeg' => 'imagecreatefromjpeg', 'png' => 'imagecreatefrompng', 'gif' => 'imagecreatefromgif');
+		if (!isset($gd[$ext]) || !function_exists($gd[$ext])) {
+			return false;
+		}
+		$dim = @getimagesize($src);
+		if (!$dim || ($dim[0] <= $max && $dim[1] <= $max)) {
+			return false;
+		}
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/images.lib.php';
+		// Fit the longest side to $max, keeping the ratio
+		$newwidth = ($dim[0] >= $dim[1]) ? $max : 0;
+		$newheight = ($dim[0] >= $dim[1]) ? 0 : $max;
+		$result = dol_imageResizeOrCrop($src, 0, $newwidth, $newheight, 0, 0, $dest, 85);
+		return ($result === $dest && dol_is_file($dest));
 	}
 
 	/**
@@ -316,8 +451,95 @@ class RfqImagesService
 				$this->errors[] = $ecm->error;
 				return null;
 			}
+			$this->trackShare($ecm);
+		} else {
+			// Only refreshes links this module created; a link shared by hand is never tracked or expired
+			$this->touchShare($ecm);
 		}
 		return self::publicRoot().'/document.php?hashp='.urlencode($ecm->share);
+	}
+
+	/**
+	 * Record a share hash created by this module, so it can expire
+	 *
+	 * @param  EcmFiles $ecm File index record
+	 * @return void
+	 */
+	private function trackShare($ecm)
+	{
+		global $conf;
+
+		$this->db->query("DELETE FROM ".MAIN_DB_PREFIX."rfqimages_share WHERE fk_ecm_files = ".((int) $ecm->id));
+		$sql = "INSERT INTO ".MAIN_DB_PREFIX."rfqimages_share (entity, fk_ecm_files, share, date_last_sent)";
+		$sql .= " VALUES (".((int) $conf->entity).", ".((int) $ecm->id).", '".$this->db->escape($ecm->share)."', '".$this->db->idate(dol_now())."')";
+		if (!$this->db->query($sql)) {
+			$this->errors[] = $this->db->lasterror();
+		}
+	}
+
+	/**
+	 * Push back the expiry of a module-created share that is sent again
+	 *
+	 * @param  EcmFiles $ecm File index record
+	 * @return void
+	 */
+	private function touchShare($ecm)
+	{
+		$sql = "UPDATE ".MAIN_DB_PREFIX."rfqimages_share SET date_last_sent = '".$this->db->idate(dol_now())."'";
+		$sql .= " WHERE fk_ecm_files = ".((int) $ecm->id)." AND share = '".$this->db->escape($ecm->share)."'";
+		$this->db->query($sql);
+	}
+
+	/**
+	 * Scheduled job: remove share links created by this module that were last sent more than
+	 * RFQIMAGES_SHARE_EXPIRE_DAYS days ago. Links shared by hand, or replaced since, are left alone.
+	 *
+	 * @return int 0 if OK, <0 if KO (cron convention)
+	 */
+	public function expireShares()
+	{
+		global $conf, $user;
+
+		$this->output = '';
+		$days = (int) getDolGlobalString('RFQIMAGES_SHARE_EXPIRE_DAYS', '0');
+		if ($days <= 0) {
+			$this->output = 'Link expiry is off (RFQIMAGES_SHARE_EXPIRE_DAYS = 0)';
+			return 0;
+		}
+
+		include_once DOL_DOCUMENT_ROOT.'/ecm/class/ecmfiles.class.php';
+		$limit = dol_now() - $days * 86400;
+		$sql = "SELECT rowid, fk_ecm_files, share FROM ".MAIN_DB_PREFIX."rfqimages_share";
+		$sql .= " WHERE entity = ".((int) $conf->entity);
+		$sql .= " AND date_last_sent < '".$this->db->idate($limit)."'";
+		$resql = $this->db->query($sql);
+		if (!$resql) {
+			$this->error = $this->db->lasterror();
+			return -1;
+		}
+
+		$rows = array();
+		while ($obj = $this->db->fetch_object($resql)) {
+			$rows[] = $obj;
+		}
+		$this->db->free($resql);
+
+		$revoked = 0;
+		foreach ($rows as $row) {
+			$ecm = new EcmFiles($this->db);
+			if ($ecm->fetch((int) $row->fk_ecm_files) > 0 && $ecm->share === $row->share) {
+				$ecm->share = '';
+				if ($ecm->update($user) < 0) {
+					$this->errors[] = $ecm->error;
+					continue;
+				}
+				$revoked++;
+			}
+			$this->db->query("DELETE FROM ".MAIN_DB_PREFIX."rfqimages_share WHERE rowid = ".((int) $row->rowid));
+		}
+
+		$this->output = $revoked.' share link(s) removed (older than '.$days.' days)';
+		return $this->errors ? -1 : 0;
 	}
 
 	/**
@@ -353,7 +575,11 @@ class RfqImagesService
 			return 0;
 		}
 		$ecm->share = '';
-		return ($ecm->update($user) < 0) ? -1 : 1;
+		if ($ecm->update($user) < 0) {
+			return -1;
+		}
+		$this->db->query("DELETE FROM ".MAIN_DB_PREFIX."rfqimages_share WHERE fk_ecm_files = ".((int) $ecm->id));
+		return 1;
 	}
 
 	/**

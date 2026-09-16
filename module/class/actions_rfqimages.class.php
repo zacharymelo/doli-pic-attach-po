@@ -173,26 +173,30 @@ class ActionsRfqImages
 			return 0;
 		}
 
+		// Copy (and resize, if set up) first: the size limit applies to what would actually be attached
+		$copies = array();
 		$total = 0;
 		foreach ($files as $f) {
-			$total += $f['size'];
+			$copy = $service->copyToMailTemp($f, $user);
+			if ($copy) {
+				$copies[] = array('copy' => $copy, 'mime' => $f['mime']);
+				$total += $copy['size'];
+			}
 		}
 		$limitmb = (float) getDolGlobalString('RFQIMAGES_MAX_ATTACH_MB', '10');
 		$uselinks = ($limitmb > 0 && $total > $limitmb * 1024 * 1024);
 
 		if (!$uselinks) {
-			$n = 0;
-			foreach ($files as $f) {
-				$copy = $service->copyToMailTemp($f, $user);
-				if ($copy) {
-					$object->add_attached_files($copy['path'], $copy['name'], $f['mime']);
-					$n++;
-				}
+			foreach ($copies as $c) {
+				$object->add_attached_files($c['copy']['path'], $c['copy']['name'], $c['mime']);
 			}
-			if ($n) {
-				setEventMessages($langs->trans('RfqImagesAttached', $n), null, 'mesgs');
+			if ($copies) {
+				setEventMessages($langs->trans('RfqImagesAttached', count($copies)), null, 'mesgs');
 			}
 		} else {
+			foreach ($copies as $c) {
+				dol_delete_file($c['copy']['path'], 0, 1, 1, null, false, 0);
+			}
 			// Links are created when the email is sent (doActions), never while the form is only open
 			$_SESSION[self::sessionKey($trackid)] = json_encode(array('toolarge' => 1));
 			setEventMessages($langs->trans('RfqImagesLinked', count($files), dol_print_size($total, 1)), null, 'warnings');

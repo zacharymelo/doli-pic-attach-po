@@ -83,14 +83,17 @@ if ($mode === 'overview' || $run_all) {
 	}
 	print "  substitutions: ".(in_array('/rfqimages/core/substitutions/', (array) $conf->modules_parts['substitutions']) ? 'registered' : 'NOT registered (re-enable module)')."\n";
 
-	print "\n--- TABLE ---\n";
-	$resql = $db->query("SELECT COUNT(rowid) as cnt FROM ".MAIN_DB_PREFIX."rfqimages_file");
-	if ($resql) {
-		$obj = $db->fetch_object($resql);
-		print "  llx_rfqimages_file: ".$obj->cnt." rows\n";
-	} else {
-		print "  llx_rfqimages_file: MISSING (".$db->lasterror().")\n";
+	print "\n--- TABLES ---\n";
+	foreach (array('rfqimages_file', 'rfqimages_share') as $tbl) {
+		$resql = $db->query("SELECT COUNT(rowid) as cnt FROM ".MAIN_DB_PREFIX.$tbl);
+		if ($resql) {
+			$obj = $db->fetch_object($resql);
+			print "  llx_$tbl: ".$obj->cnt." rows\n";
+		} else {
+			print "  llx_$tbl: MISSING (".$db->lasterror().") - re-enable module\n";
+		}
 	}
+	print "  flagged categories (with subcategories): ".implode(',', array_keys($service->getFlaggedCategoryIds()))."\n";
 
 	print "\n--- EXTRAFIELD ---\n";
 	$ef = new ExtraFields($db);
@@ -115,7 +118,8 @@ if (($mode === 'product' || $run_all) && $id > 0) {
 	} else {
 		$product->fetch_optionals();
 		print "  ref: ".$product->ref."\n";
-		print "  flagged: ".(!empty($product->array_options['options_rfqimages_send']) ? 'YES' : 'NO')."\n";
+		$source = $service->getFlagSource($product);
+		print "  flagged: ".($source === '' ? 'NO' : ($source === 'product' ? 'YES (product switch)' : 'YES (category '.$source.')'))."\n";
 		print "  dir: ".RfqImagesService::getProductDir($product)."\n";
 		print "  not sent (extension not in setup): ".implode(', ', $service->listOtherFiles($product))."\n";
 		foreach ($service->listCandidateFiles($product) as $f) {

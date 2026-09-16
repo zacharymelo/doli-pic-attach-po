@@ -144,6 +144,7 @@ print '<div class="fichecenter">';
 print '<div class="underbanner clearboth"></div>';
 
 $flagged = !empty($object->array_options['options_rfqimages_send']);
+$flagsource = $service->getFlagSource($object);
 
 print '<table class="border centpercent tableforfield">';
 print '<tr><td class="titlefield">'.$form->textwithpicto($langs->trans('RfqImagesSend'), $langs->trans('RfqImagesSendHelp')).'</td><td>';
@@ -152,6 +153,9 @@ if ($permwrite) {
 	print '<a class="reposition" href="'.$url.'">'.img_picto($langs->trans($flagged ? 'Activated' : 'Disabled'), $flagged ? 'switch_on' : 'switch_off').'</a>';
 } else {
 	print yn($flagged);
+}
+if (!$flagged && $flagsource !== '') {
+	print ' <span class="opacitymedium">'.$langs->trans('RfqImagesFlaggedByCategory', dol_escape_htmltag($flagsource)).'</span>';
 }
 print '</td></tr>';
 print '<tr><td>'.$langs->trans('RfqImagesExtensions').'</td><td>'.dol_escape_htmltag(implode(', ', RfqImagesService::getExtensions()));
@@ -167,7 +171,7 @@ print dol_get_fiche_end();
 
 print '<br>';
 
-if (!$flagged) {
+if ($flagsource === '') {
 	print '<div class="opacitymedium">'.$langs->trans('RfqImagesNotFlagged').'</div>';
 }
 
@@ -176,7 +180,7 @@ print '<input type="hidden" name="token" value="'.newToken().'">';
 print '<input type="hidden" name="action" value="savechoices">';
 
 print '<div class="div-table-responsive-no-min">';
-print '<table class="noborder centpercent'.($flagged ? '' : ' opacitymedium').'">';
+print '<table class="noborder centpercent'.($flagsource !== '' ? '' : ' opacitymedium').'">';
 print '<tr class="liste_titre">';
 print '<td class="center width50">'.$langs->trans('RfqImagesInclude').'</td>';
 print '<td class="width100"></td>';

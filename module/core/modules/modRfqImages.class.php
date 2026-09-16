@@ -35,7 +35,7 @@ class modRfqImages extends DolibarrModules
 
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
 		$this->description = 'Attach (or link) flagged product images when emailing vendor price requests and purchase orders';
-		$this->version = '1.3.0';
+		$this->version = '1.4.0';
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 		$this->picto = 'image';
 
@@ -64,6 +64,9 @@ class modRfqImages extends DolibarrModules
 			array('RFQIMAGES_ON_SUPPLIER_PROPOSAL', 'chaine', '1', 'Send product images with price request emails', 0, 'current', 0),
 			array('RFQIMAGES_ON_SUPPLIER_ORDER', 'chaine', '1', 'Send product images with purchase order emails', 0, 'current', 0),
 			array('RFQIMAGES_LINKS_SHOW_TITLE', 'chaine', '1', 'Show a heading above share links', 0, 'current', 0),
+			array('RFQIMAGES_NEW_FILES_INCLUDED', 'chaine', '1', 'Files not ticked or unticked on the product tab are sent', 0, 'current', 0),
+			array('RFQIMAGES_RESIZE_MAX_PX', 'chaine', '0', 'Attach images resized to this many pixels on the longest side (0 = originals)', 0, 'current', 0),
+			array('RFQIMAGES_SHARE_EXPIRE_DAYS', 'chaine', '0', 'Remove share links created by the module after this many days (0 = never)', 0, 'current', 0),
 		);
 
 		$this->tabs = array();
@@ -71,7 +74,22 @@ class modRfqImages extends DolibarrModules
 
 		$this->dictionaries = array();
 		$this->boxes = array();
-		$this->cronjobs = array();
+		$this->cronjobs = array(
+			0 => array(
+				'label' => 'RfqImagesExpireShares',
+				'jobtype' => 'method',
+				'class' => '/rfqimages/class/rfqimagesservice.class.php',
+				'objectname' => 'RfqImagesService',
+				'method' => 'expireShares',
+				'parameters' => '',
+				'comment' => 'Remove share links created by rfqimages that are older than the setup limit',
+				'frequency' => 1,
+				'unitfrequency' => 86400,
+				'priority' => 50,
+				'status' => 1,
+				'test' => 'isModEnabled("rfqimages")',
+			),
+		);
 
 		// Uses core product / supplier_proposal / supplier order permissions
 		$this->rights = array();

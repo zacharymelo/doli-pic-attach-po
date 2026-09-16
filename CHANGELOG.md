@@ -1,7 +1,14 @@
 # Changelog
 
-## Unreleased
-- Setup: heading text shown before the share links (blank = translated default "Product files:"), and a switch to hide the heading.
+## 1.4.0 — 2026-09-16
+- **File types:** chosen from a list of common image, document, CAD and archive types, plus a box for any other extension (replaces the comma-separated text field).
+- **Send for product categories:** products in selected categories (including subcategories) are sent without switching each product on. The product tab shows when a product is sent because of its category.
+- **Include new files:** choose whether files never ticked or unticked on a product's tab are sent (default) or left out until ticked.
+- **Resize attached images:** attach jpg/png/gif shrunk to a maximum size in pixels; the size limit is checked on the resized copies. Share links still point to the originals.
+- **Remove share links after N days:** a daily scheduled job removes share links this module created once they haven't been emailed for N days. Links shared by hand, or replaced since, are never touched. Revoking a link on the product tab also stops tracking it.
+- **Share link heading:** set the text shown before the links, or hide it.
+- Setup page grouped into sections.
+- **Upgrade:** disable and re-enable the module after deploying (creates the new share tracking table and the scheduled job). Link removal needs the Scheduled jobs module enabled.
 
 ## 1.3.0 — 2026-09-16
 - `__RFQIMAGES_LINKS__` is back and now always works: wherever it appears in a price request or purchase order email, it is replaced with share links when the email is sent. Files are still attached as usual, so a template can include both.
