@@ -25,9 +25,6 @@ Home → Setup → Modules → Vendor Product Images:
 ## Upgrading
 Deploy the new zip, then **disable and re-enable** the module so new hooks are registered. Settings, file picks and product flags are kept.
 
-## Also fixes
-Dolibarr core bug on price requests: Cancel on the line form redirected to `/supplier_proposal/3D<id>`. The module repairs the return URL.
-
 ## Development
 ```bash
 docker compose -p rfqimages up -d   # http://localhost:8104 (admin/admin), mail UI http://localhost:8025

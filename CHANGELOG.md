@@ -1,9 +1,12 @@
 # Changelog
 
+## 1.1.1 — 2026-09-16
+- Removed the workaround for the core price request Cancel redirect (`/supplier_proposal/3D<id>`). It is unrelated to this module and is being fixed in Dolibarr core instead.
+
 ## 1.1.0 — 2026-09-16
 - Purchase orders: product files are now also attached (or linked) when emailing a purchase order. Setup has on/off switches for price requests and purchase orders (both on).
 - Product tab renamed "Vendor email images" and now warns about files that are not sent because their extension is not in the setup list (PDFs are not included by default; add `pdf` in setup).
-- Workaround for a Dolibarr core bug: Cancel on a price request's line form redirected to `/supplier_proposal/3D<id>` (a 404). The return URL is now repaired.
+- Workaround for a Dolibarr core bug: Cancel on a price request's line form redirected to `/supplier_proposal/3D<id>` (a 404). (Removed in 1.1.1.)
 - No longer requires the Price requests module; only Products.
 - **Upgrade:** after deploying, disable and re-enable the module so the new purchase order hook is registered.
 

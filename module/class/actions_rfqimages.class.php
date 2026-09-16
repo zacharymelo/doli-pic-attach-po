@@ -220,9 +220,8 @@ class ActionsRfqImages
 	}
 
 	/**
-	 * On price request / purchase order cards, before core actions:
-	 * - repair the add-line form's return URL that core double-encodes (cancel led to /supplier_proposal/3D<id>)
-	 * - before sending the email, append the links block if the message does not contain it
+	 * On price request / purchase order cards, before core sends the email:
+	 * append the links block if the message does not contain it
 	 *
 	 * @param  array<string,mixed> $parameters Hook parameters
 	 * @param  CommonObject        $object     SupplierProposal or CommandeFournisseur
@@ -235,15 +234,10 @@ class ActionsRfqImages
 		if (!isModEnabled('rfqimages')) {
 			return 0;
 		}
-		$contexts = explode(':', isset($parameters['context']) ? $parameters['context'] : '');
-
-		if (in_array('supplier_proposalcard', $contexts)) {
-			self::repairBacktopage();
-		}
-
 		if ($action !== 'send' || empty($object->id)) {
 			return 0;
 		}
+		$contexts = explode(':', isset($parameters['context']) ? $parameters['context'] : '');
 		$prefix = '';
 		foreach (self::$documents as $p => $doc) {
 			if (in_array($doc['context'], $contexts)) {
@@ -287,29 +281,5 @@ class ActionsRfqImages
 		$_POST['message'] = $message.($html ? '<br>'.$block : "\n\n".$block);
 
 		return 0;
-	}
-
-	/**
-	 * Core bug (supplier_proposal/card.php, Dolibarr 22): the add-line form posts backtopage already urlencoded,
-	 * and GETPOST('backtopage', 'alpha') strips everything up to the last '%', leaving '3D<id>'.
-	 * Decode the raw value once and run it through the same sanitizer, then fix the page's $backtopage.
-	 *
-	 * @return void
-	 */
-	public static function repairBacktopage()
-	{
-		global $backtopage;
-
-		$raw = isset($_POST['backtopage']) ? (string) $_POST['backtopage'] : '';
-		if ($raw === '' || strpos($raw, '?') !== false || stripos($raw, '%3F') === false) {
-			return;
-		}
-		$_POST['backtopage'] = rawurldecode($raw);
-		$fixed = GETPOST('backtopage', 'alpha');
-		if ($fixed !== '' && $fixed[0] === '/') {
-			$backtopage = $fixed;
-		} else {
-			$_POST['backtopage'] = $raw;
-		}
 	}
 }
