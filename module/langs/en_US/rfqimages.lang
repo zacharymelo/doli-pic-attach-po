@@ -1,12 +1,12 @@
 # Module
-Module510410Name = RFQ Product Images
-Module510410Desc = Attach (or link) flagged product images when emailing vendor price requests
+Module510410Name = Vendor Product Images
+Module510410Desc = Attach (or link) flagged product images when emailing vendor price requests and purchase orders
 
 # Product extrafield / tab
-RfqImagesTab = Price request images
-RfqImagesSend = Send images with price requests
-RfqImagesSendHelp = When enabled, this product's selected image files are attached to price request emails (or sent as share links when too large).
-RfqImagesNotFlagged = This product is not flagged: none of these files are sent. Turn on "Send images with price requests" above.
+RfqImagesTab = Vendor email images
+RfqImagesSend = Send images to vendors
+RfqImagesSendHelp = When enabled, this product's selected files are attached to price request and purchase order emails (or sent as share links when too large).
+RfqImagesNotFlagged = This product is not flagged: none of these files are sent. Turn on "Send images to vendors" above.
 RfqImagesInclude = Include
 RfqImagesShareStatus = Public link
 RfqImagesShared = Shared
@@ -14,23 +14,29 @@ RfqImagesPrivate = Private
 RfqImagesRevoke = Revoke public link
 RfqImagesShareRevoked = Public link removed for %s
 RfqImagesNoFiles = No matching files in this product's Documents tab.
+RfqImagesOtherFiles = %s file(s) not sent because their extension is not in the setup list: %s
 
 # Email form
-RfqImagesAttached = %s product image(s) attached
-RfqImagesLinked = %s product image(s) sent as share links in the message: too large to attach (total %s)
-RfqImagesSomeFailed = Some product images could not be added
-RfqImagesLinksTitle = Product images:
+RfqImagesAttached = %s product file(s) attached
+RfqImagesLinked = %s product file(s) sent as share links in the message: too large to attach (total %s)
+RfqImagesSomeFailed = Some product files could not be added
+RfqImagesLinksTitle = Product files:
 
 # Setup
-RfqImagesSetup = RFQ Product Images setup
-RfqImagesSetupIntro = Flag products on their "Price request images" tab. When a price request is emailed, the images of flagged products are attached automatically.
+RfqImagesOnSupplierProposal = Price requests
+RfqImagesOnSupplierProposalDesc = Add product files when emailing a price request
+RfqImagesOnSupplierOrder = Purchase orders
+RfqImagesOnSupplierOrderDesc = Add product files when emailing a purchase order
+RfqImagesModuleOff = (module not enabled)
+RfqImagesSetup = Vendor Product Images setup
+RfqImagesSetupIntro = Flag products on their "Vendor email images" tab. When a price request or purchase order is emailed, the files of flagged products are attached automatically.
 RfqImagesExtensions = File extensions
-RfqImagesExtensionsDesc = Comma-separated list of extensions to send, e.g. jpg,jpeg,png,gif,webp,pdf
+RfqImagesExtensionsDesc = Comma-separated list of extensions to send. PDFs are not included by default: add pdf to send them.
 RfqImagesMaxAttach = Maximum total attachment size
 RfqImagesMaxAttachDesc = Above this total, public share links are put in the message instead of attachments. 0 = always attach.
 RfqImagesAutoAppend = Append links automatically
 RfqImagesAutoAppendDesc = When links are used and the message does not contain them, add them at the end of the message when sending.
-RfqImagesTemplateHelp = To place the links yourself, add the key __RFQIMAGES_LINKS__ to your price request email template. It is empty when images are attached.
+RfqImagesTemplateHelp = To place the links yourself, add the key __RFQIMAGES_LINKS__ to your price request or purchase order email template. It is empty when files are attached.
 RfqImagesRepairExtrafield = Recreate product extrafield
 RfqImagesExtrafieldOk = Product extrafield is present
 DebugMode = Debug Mode

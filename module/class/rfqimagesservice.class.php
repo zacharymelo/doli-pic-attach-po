@@ -132,16 +132,16 @@ class RfqImagesService
 	}
 
 	/**
-	 * Eligible files of every distinct product on a price request
+	 * Eligible files of every distinct product on a price request or purchase order
 	 *
-	 * @param  SupplierProposal $proposal Price request with lines loaded
+	 * @param  CommonObject $document SupplierProposal or CommandeFournisseur with lines loaded
 	 * @return array<int,array{fullpath:string,name:string,size:int,mime:string,selected:int,productref:string,fk_product:int}>
 	 */
-	public function collectForProposal($proposal)
+	public function collectForDocument($document)
 	{
 		$seen = array();
 		$files = array();
-		foreach ((array) $proposal->lines as $line) {
+		foreach ((array) $document->lines as $line) {
 			$fk = (int) $line->fk_product;
 			if ($fk <= 0 || isset($seen[$fk])) {
 				continue;
@@ -156,6 +156,28 @@ class RfqImagesService
 			$files = array_merge($files, $this->getEligibleFiles($product));
 		}
 		return $files;
+	}
+
+	/**
+	 * Files in the product folder that are not sent because their extension is not in the setup list
+	 *
+	 * @param  Product  $product Product
+	 * @return string[]          File names
+	 */
+	public function listOtherFiles($product)
+	{
+		$dir = self::getProductDir($product);
+		if (!dol_is_dir($dir)) {
+			return array();
+		}
+		$exts = self::getExtensions();
+		$out = array();
+		foreach (dol_dir_list($dir, 'files', 0, '', '(\.meta|_preview.*\.png)$') as $f) {
+			if (!in_array(strtolower(pathinfo($f['name'], PATHINFO_EXTENSION)), $exts, true)) {
+				$out[] = $f['name'];
+			}
+		}
+		return $out;
 	}
 
 	/**

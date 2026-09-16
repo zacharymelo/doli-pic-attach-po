@@ -43,6 +43,14 @@ if (!$user->admin) {
 
 $action = GETPOST('action', 'aZ09');
 
+// Upgrades from 1.0.0 without re-enabling: these new settings default to on, create them so the toggles show it.
+// Their toggles store 0 when switched off (instead of deleting), so this never switches them back on.
+foreach (array('RFQIMAGES_ON_SUPPLIER_PROPOSAL', 'RFQIMAGES_ON_SUPPLIER_ORDER') as $constname) {
+	if (!isset($conf->global->$constname)) {
+		dolibarr_set_const($db, $constname, '1', 'chaine', 0, '', $conf->entity);
+	}
+}
+
 
 /*
  * Actions
@@ -98,6 +106,14 @@ print '<span class="opacitymedium">'.$langs->trans('RfqImagesSetupIntro').'</spa
 print '<div class="div-table-responsive-no-min">';
 print '<table class="noborder centpercent">';
 print '<tr class="liste_titre"><td>'.$langs->trans('Parameter').'</td><td>'.$langs->trans('Value').'</td><td>'.$langs->trans('Description').'</td></tr>';
+
+// Documents
+print '<tr class="oddeven"><td>'.$langs->trans('RfqImagesOnSupplierProposal').'</td>';
+print '<td>'.ajax_constantonoff('RFQIMAGES_ON_SUPPLIER_PROPOSAL', array(), null, 0, 0, 0, 2, 0, 1).'</td>';
+print '<td class="opacitymedium">'.$langs->trans('RfqImagesOnSupplierProposalDesc').(isModEnabled('supplier_proposal') ? '' : ' <span class="warning">'.$langs->trans('RfqImagesModuleOff').'</span>').'</td></tr>';
+print '<tr class="oddeven"><td>'.$langs->trans('RfqImagesOnSupplierOrder').'</td>';
+print '<td>'.ajax_constantonoff('RFQIMAGES_ON_SUPPLIER_ORDER', array(), null, 0, 0, 0, 2, 0, 1).'</td>';
+print '<td class="opacitymedium">'.$langs->trans('RfqImagesOnSupplierOrderDesc').((isModEnabled('fournisseur') || isModEnabled('supplier_order')) ? '' : ' <span class="warning">'.$langs->trans('RfqImagesModuleOff').'</span>').'</td></tr>';
 
 // Extensions
 print '<tr class="oddeven"><td>'.$langs->trans('RfqImagesExtensions').'</td><td>';

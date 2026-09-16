@@ -10,7 +10,7 @@
 /**
  * \file    class/actions_rfqimages.class.php
  * \ingroup rfqimages
- * \brief   Hooks: inject product images into the price request email form
+ * \brief   Hooks: inject product images into price request and purchase order email forms
  */
 
 /**
@@ -34,6 +34,28 @@ class ActionsRfqImages
 	public $resprints = '';
 
 	/**
+	 * Supported vendor documents, keyed by mail trackid prefix
+	 *
+	 * @var array<string,array{element:string,context:string,class:string,file:string,const:string}>
+	 */
+	public static $documents = array(
+		'spro' => array(
+			'element' => 'supplier_proposal',
+			'context' => 'supplier_proposalcard',
+			'class' => 'SupplierProposal',
+			'file' => '/supplier_proposal/class/supplier_proposal.class.php',
+			'const' => 'RFQIMAGES_ON_SUPPLIER_PROPOSAL',
+		),
+		'sord' => array(
+			'element' => 'order_supplier',
+			'context' => 'ordersuppliercard',
+			'class' => 'CommandeFournisseur',
+			'file' => '/fourn/class/fournisseur.commande.class.php',
+			'const' => 'RFQIMAGES_ON_SUPPLIER_ORDER',
+		),
+	);
+
+	/**
 	 * Constructor
 	 *
 	 * @param DoliDB $db Database handler
@@ -55,21 +77,54 @@ class ActionsRfqImages
 	}
 
 	/**
-	 * Price request id from a mail trackid ('spro123' => 123), 0 if not a price request
+	 * Trackid prefix for an element ('supplier_proposal' => 'spro'), '' if unsupported
 	 *
-	 * @param  string $trackid Trackid
-	 * @return int
+	 * @param  string $element Object element
+	 * @return string
 	 */
-	public static function proposalIdFromTrackid($trackid)
+	public static function prefixForElement($element)
 	{
-		$reg = array();
-		return preg_match('/^spro(\d+)$/', (string) $trackid, $reg) ? (int) $reg[1] : 0;
+		foreach (self::$documents as $prefix => $doc) {
+			if ($doc['element'] === $element) {
+				return $prefix;
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * Whether sending images is enabled for a document type (on unless switched off in setup)
+	 *
+	 * @param  string $prefix Trackid prefix
+	 * @return bool
+	 */
+	public static function isEnabledFor($prefix)
+	{
+		return isset(self::$documents[$prefix]) && getDolGlobalString(self::$documents[$prefix]['const'], '1') !== '0';
+	}
+
+	/**
+	 * Whether the user may read a document type
+	 *
+	 * @param  string $prefix Trackid prefix
+	 * @param  User   $user   User
+	 * @return bool
+	 */
+	public static function userCanRead($prefix, $user)
+	{
+		if ($prefix === 'spro') {
+			return (bool) $user->hasRight('supplier_proposal', 'lire');
+		}
+		if ($prefix === 'sord') {
+			return $user->hasRight('fournisseur', 'commande', 'lire') || $user->hasRight('supplier_order', 'lire');
+		}
+		return false;
 	}
 
 	/**
 	 * Called by FormMail::get_form() after attachments are cleared and before they are listed.
-	 * On a fresh form (mode=init) for a price request, attaches flagged product images,
-	 * or prepares share links when they are too large.
+	 * On a fresh form (mode=init) for a price request or purchase order, attaches flagged product
+	 * images, or prepares share links when they are too large.
 	 *
 	 * @param  array<string,mixed> $parameters Hook parameters (trackid, ...)
 	 * @param  FormMail            $object     The mail form
@@ -79,14 +134,19 @@ class ActionsRfqImages
 	 */
 	public function getFormMail($parameters, &$object, &$action, $hookmanager)
 	{
-		global $conf, $user, $langs;
+		global $user, $langs;
 
 		if (!isModEnabled('rfqimages') || GETPOST('mode', 'alpha') !== 'init') {
 			return 0;
 		}
-		$trackid = isset($parameters['trackid']) ? $parameters['trackid'] : '';
-		$proposalid = self::proposalIdFromTrackid($trackid);
-		if ($proposalid <= 0 || !$user->hasRight('supplier_proposal', 'lire')) {
+		$trackid = isset($parameters['trackid']) ? (string) $parameters['trackid'] : '';
+		$reg = array();
+		if (!preg_match('/^(spro|sord)(\d+)$/', $trackid, $reg)) {
+			return 0;
+		}
+		$prefix = $reg[1];
+		$docid = (int) $reg[2];
+		if (!self::isEnabledFor($prefix) || !self::userCanRead($prefix, $user)) {
 			return 0;
 		}
 
@@ -97,17 +157,22 @@ class ActionsRfqImages
 		}
 		$object->substit['__RFQIMAGES_LINKS__'] = '';
 
-		require_once DOL_DOCUMENT_ROOT.'/supplier_proposal/class/supplier_proposal.class.php';
+		$doc = self::$documents[$prefix];
+		require_once DOL_DOCUMENT_ROOT.$doc['file'];
 		dol_include_once('/rfqimages/class/rfqimagesservice.class.php');
 		$langs->load('rfqimages@rfqimages');
 
-		$proposal = new SupplierProposal($this->db);
-		if ($proposal->fetch($proposalid) <= 0) {
+		$classname = $doc['class'];
+		$document = new $classname($this->db);
+		if ($document->fetch($docid) <= 0) {
 			return 0;
+		}
+		if (empty($document->lines) && method_exists($document, 'fetch_lines')) {
+			$document->fetch_lines();
 		}
 
 		$service = new RfqImagesService($this->db);
-		$files = $service->collectForProposal($proposal);
+		$files = $service->collectForDocument($document);
 		if (empty($files)) {
 			return 0;
 		}
@@ -141,9 +206,8 @@ class ActionsRfqImages
 			}
 			if ($links) {
 				$html = (bool) getDolGlobalInt('FCKEDITOR_ENABLE_MAIL');
-				$block = RfqImagesService::buildLinksBlock($links, $html);
 				$_SESSION[self::sessionKey($trackid)] = json_encode(array('links' => $links));
-				$object->substit['__RFQIMAGES_LINKS__'] = $block;
+				$object->substit['__RFQIMAGES_LINKS__'] = RfqImagesService::buildLinksBlock($links, $html);
 				setEventMessages($langs->trans('RfqImagesLinked', count($links), dol_print_size($total, 1)), null, 'warnings');
 			}
 		}
@@ -156,21 +220,37 @@ class ActionsRfqImages
 	}
 
 	/**
-	 * Before core sends the price request email: append the links block if the message does not contain it
+	 * On price request / purchase order cards, before core actions:
+	 * - repair the add-line form's return URL that core double-encodes (cancel led to /supplier_proposal/3D<id>)
+	 * - before sending the email, append the links block if the message does not contain it
 	 *
 	 * @param  array<string,mixed> $parameters Hook parameters
-	 * @param  CommonObject        $object     SupplierProposal
+	 * @param  CommonObject        $object     SupplierProposal or CommandeFournisseur
 	 * @param  string              $action     Current action
 	 * @param  HookManager         $hookmanager Hook manager
 	 * @return int                             0
 	 */
 	public function doActions($parameters, &$object, &$action, $hookmanager)
 	{
-		if (!isModEnabled('rfqimages') || $action !== 'send' || empty($object->id)) {
+		if (!isModEnabled('rfqimages')) {
 			return 0;
 		}
 		$contexts = explode(':', isset($parameters['context']) ? $parameters['context'] : '');
-		if (!in_array('supplier_proposalcard', $contexts)) {
+
+		if (in_array('supplier_proposalcard', $contexts)) {
+			self::repairBacktopage();
+		}
+
+		if ($action !== 'send' || empty($object->id)) {
+			return 0;
+		}
+		$prefix = '';
+		foreach (self::$documents as $p => $doc) {
+			if (in_array($doc['context'], $contexts)) {
+				$prefix = $p;
+			}
+		}
+		if ($prefix === '') {
 			return 0;
 		}
 		// Only the real send, not add/remove attachment or template reloads
@@ -178,8 +258,7 @@ class ActionsRfqImages
 			return 0;
 		}
 
-		$trackid = 'spro'.$object->id;
-		$key = self::sessionKey($trackid);
+		$key = self::sessionKey($prefix.$object->id);
 		if (empty($_SESSION[$key])) {
 			return 0;
 		}
@@ -193,13 +272,13 @@ class ActionsRfqImages
 		dol_include_once('/rfqimages/class/rfqimagesservice.class.php');
 
 		$message = isset($_POST['message']) ? (string) $_POST['message'] : '';
-		// Already present: the template used __RFQIMAGES_LINKS__, or the user kept the key for send-time substitution
-		if (strpos($message, '__RFQIMAGES_LINKS__') !== false || strpos($message, $data['links'][0]['url']) !== false
-			|| strpos($message, dol_escape_htmltag($data['links'][0]['url'])) !== false) {
-			if (strpos($message, '__RFQIMAGES_LINKS__') !== false) {
-				// Keep the data for the substitution function at send time
-				$_SESSION[$key] = json_encode($data);
-			}
+		if (strpos($message, '__RFQIMAGES_LINKS__') !== false) {
+			// Keep the data for the substitution function at send time
+			$_SESSION[$key] = json_encode($data);
+			return 0;
+		}
+		// Already present: the template used __RFQIMAGES_LINKS__ and it was substituted in the form
+		if (strpos($message, $data['links'][0]['url']) !== false || strpos($message, dol_escape_htmltag($data['links'][0]['url'])) !== false) {
 			return 0;
 		}
 
@@ -208,5 +287,29 @@ class ActionsRfqImages
 		$_POST['message'] = $message.($html ? '<br>'.$block : "\n\n".$block);
 
 		return 0;
+	}
+
+	/**
+	 * Core bug (supplier_proposal/card.php, Dolibarr 22): the add-line form posts backtopage already urlencoded,
+	 * and GETPOST('backtopage', 'alpha') strips everything up to the last '%', leaving '3D<id>'.
+	 * Decode the raw value once and run it through the same sanitizer, then fix the page's $backtopage.
+	 *
+	 * @return void
+	 */
+	public static function repairBacktopage()
+	{
+		global $backtopage;
+
+		$raw = isset($_POST['backtopage']) ? (string) $_POST['backtopage'] : '';
+		if ($raw === '' || strpos($raw, '?') !== false || stripos($raw, '%3F') === false) {
+			return;
+		}
+		$_POST['backtopage'] = rawurldecode($raw);
+		$fixed = GETPOST('backtopage', 'alpha');
+		if ($fixed !== '' && $fixed[0] === '/') {
+			$backtopage = $fixed;
+		} else {
+			$_POST['backtopage'] = $raw;
+		}
 	}
 }

@@ -14,7 +14,7 @@
  */
 
 /**
- * Add __RFQIMAGES_LINKS__. Empty unless share links were prepared for this price request's email form.
+ * Add __RFQIMAGES_LINKS__. Empty unless share links were prepared for this price request's or purchase order's email form.
  *
  * @param  array<string,string> $substitutionarray Substitution array (modified)
  * @param  Translate            $outputlangs       Output language
@@ -26,10 +26,15 @@ function rfqimages_completesubstitutionarray(&$substitutionarray, $outputlangs, 
 {
 	$substitutionarray['__RFQIMAGES_LINKS__'] = '';
 
-	if (!is_object($object) || empty($object->id) || $object->element !== 'supplier_proposal') {
+	if (!is_object($object) || empty($object->id) || empty($object->element)) {
 		return;
 	}
-	$key = 'rfqimages_links-spro'.$object->id;
+	dol_include_once('/rfqimages/class/actions_rfqimages.class.php');
+	$prefix = ActionsRfqImages::prefixForElement($object->element);
+	if ($prefix === '') {
+		return;
+	}
+	$key = ActionsRfqImages::sessionKey($prefix.$object->id);
 	if (empty($_SESSION[$key])) {
 		return;
 	}

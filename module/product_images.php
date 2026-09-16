@@ -154,7 +154,12 @@ if ($permwrite) {
 	print yn($flagged);
 }
 print '</td></tr>';
-print '<tr><td>'.$langs->trans('RfqImagesExtensions').'</td><td>'.dol_escape_htmltag(implode(', ', RfqImagesService::getExtensions())).'</td></tr>';
+print '<tr><td>'.$langs->trans('RfqImagesExtensions').'</td><td>'.dol_escape_htmltag(implode(', ', RfqImagesService::getExtensions()));
+$others = $service->listOtherFiles($object);
+if ($others) {
+	print '<br><span class="warning">'.img_warning().' '.$langs->trans('RfqImagesOtherFiles', count($others), dol_escape_htmltag(dol_trunc(implode(', ', $others), 120))).'</span>';
+}
+print '</td></tr>';
 print '</table>';
 
 print '</div>';

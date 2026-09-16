@@ -34,15 +34,15 @@ class modRfqImages extends DolibarrModules
 		$this->module_position = '50';
 
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
-		$this->description = 'Attach (or link) flagged product images when emailing vendor price requests';
-		$this->version = '1.0.0';
+		$this->description = 'Attach (or link) flagged product images when emailing vendor price requests and purchase orders';
+		$this->version = '1.1.0';
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 		$this->picto = 'image';
 
 		$this->module_parts = array(
 			'triggers' => 0,
 			'substitutions' => 1,
-			'hooks' => array('data' => array('formmail', 'supplier_proposalcard'), 'entity' => '0'),
+			'hooks' => array('data' => array('formmail', 'supplier_proposalcard', 'ordersuppliercard'), 'entity' => '0'),
 		);
 
 		$this->dirs = array('/rfqimages/temp');
@@ -50,7 +50,8 @@ class modRfqImages extends DolibarrModules
 		$this->config_page_url = array('setup.php@rfqimages');
 
 		$this->hidden = false;
-		$this->depends = array('modProduct', 'modSupplierProposal');
+		// Works with price requests (modSupplierProposal) and/or purchase orders (modFournisseur)
+		$this->depends = array('modProduct');
 		$this->requiredby = array();
 		$this->conflictwith = array();
 		$this->langfiles = array('rfqimages@rfqimages');
@@ -60,6 +61,8 @@ class modRfqImages extends DolibarrModules
 		$this->const = array(
 			array('RFQIMAGES_EXTENSIONS', 'chaine', 'jpg,jpeg,png,gif,webp', 'File extensions sent with price requests', 0, 'current', 0),
 			array('RFQIMAGES_MAX_ATTACH_MB', 'chaine', '10', 'Above this total size (MB), share links are used instead of attachments', 0, 'current', 0),
+			array('RFQIMAGES_ON_SUPPLIER_PROPOSAL', 'chaine', '1', 'Send product images with price request emails', 0, 'current', 0),
+			array('RFQIMAGES_ON_SUPPLIER_ORDER', 'chaine', '1', 'Send product images with purchase order emails', 0, 'current', 0),
 			array('RFQIMAGES_AUTO_APPEND_LINKS', 'chaine', '1', 'Append links to the message when the template has no __RFQIMAGES_LINKS__ key', 0, 'current', 0),
 		);
 
@@ -70,7 +73,7 @@ class modRfqImages extends DolibarrModules
 		$this->boxes = array();
 		$this->cronjobs = array();
 
-		// Uses core product / supplier_proposal permissions
+		// Uses core product / supplier_proposal / supplier order permissions
 		$this->rights = array();
 		$this->rights_class = 'rfqimages';
 

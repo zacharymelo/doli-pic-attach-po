@@ -16,6 +16,7 @@
  *   overview  — module status, hooks, table, extrafield, settings (default)
  *   product   — files and choices of one product (?mode=product&id=12)
  *   proposal  — what would be sent for a price request (?mode=proposal&id=5)
+ *   order     — what would be sent for a purchase order (?mode=order&id=5)
  *   all       — overview + product/proposal when id given
  */
 
@@ -41,7 +42,7 @@ if (!$user->admin) {
 }
 if (!getDolGlobalInt('RFQIMAGES_DEBUG_MODE')) {
 	http_response_code(403);
-	print 'Debug mode not enabled. Go to RFQ Product Images > Setup and enable Debug Mode.';
+	print 'Debug mode not enabled. Go to Vendor Product Images > Setup and enable Debug Mode.';
 	exit;
 }
 
@@ -49,6 +50,8 @@ header('Content-Type: text/plain; charset=utf-8');
 
 dol_include_once('/rfqimages/class/rfqimagesservice.class.php');
 require_once DOL_DOCUMENT_ROOT.'/supplier_proposal/class/supplier_proposal.class.php';
+require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.class.php';
+dol_include_once('/rfqimages/class/actions_rfqimages.class.php');
 
 $mode = GETPOST('mode', 'alpha') ?: 'overview';
 $id = GETPOSTINT('id');
@@ -59,7 +62,7 @@ print "=== RFQIMAGES DEBUG DIAGNOSTICS ===\n";
 print "Timestamp: ".dol_print_date(dol_now(), 'dayhourlog')."\n";
 print "Dolibarr: ".DOL_VERSION."\n";
 print "Mode: $mode\n";
-print "Usage: ?mode=overview|product|proposal|all [&id=N]\n";
+print "Usage: ?mode=overview|product|proposal|order|all [&id=N]\n";
 print str_repeat('=', 60)."\n\n";
 
 if ($mode === 'overview' || $run_all) {
@@ -68,7 +71,7 @@ if ($mode === 'overview' || $run_all) {
 	print "Public URL root: ".RfqImagesService::publicRoot()."\n";
 
 	print "\n--- HOOK CONTEXTS ---\n";
-	foreach (array('formmail', 'supplier_proposalcard') as $ctx) {
+	foreach (array('formmail', 'supplier_proposalcard', 'ordersuppliercard') as $ctx) {
 		$mods = isset($conf->modules_parts['hooks'][$ctx]) ? (array) $conf->modules_parts['hooks'][$ctx] : array();
 		$found = false;
 		foreach ($mods as $m) {
@@ -114,6 +117,7 @@ if (($mode === 'product' || $run_all) && $id > 0) {
 		print "  ref: ".$product->ref."\n";
 		print "  flagged: ".(!empty($product->array_options['options_rfqimages_send']) ? 'YES' : 'NO')."\n";
 		print "  dir: ".RfqImagesService::getProductDir($product)."\n";
+		print "  not sent (extension not in setup): ".implode(', ', $service->listOtherFiles($product))."\n";
 		foreach ($service->listCandidateFiles($product) as $f) {
 			$ecm = $service->fetchEcmFile($f['fullpath']);
 			print "  - ".$f['name']." size=".$f['size']." selected=".$f['selected']." ecm=".($ecm ? $ecm->id : 'none')." share=".($ecm && $ecm->share ? 'yes' : 'no')."\n";
@@ -122,22 +126,31 @@ if (($mode === 'product' || $run_all) && $id > 0) {
 	}
 }
 
-if (($mode === 'proposal' || $run_all) && $id > 0) {
-	print "--- PRICE REQUEST id=$id ---\n";
-	$sp = new SupplierProposal($db);
-	if ($sp->fetch($id) <= 0) {
-		print "  fetch failed\n\n";
-	} else {
-		$files = $service->collectForProposal($sp);
-		$total = 0;
-		foreach ($files as $f) {
-			$total += $f['size'];
-			print "  - ".$f['productref']." / ".$f['name']." (".$f['size'].")\n";
-		}
-		$limit = (float) getDolGlobalString('RFQIMAGES_MAX_ATTACH_MB', '10');
-		print "  total: $total bytes, limit: $limit MB → ".(($limit > 0 && $total > $limit * 1048576) ? 'LINKS' : 'ATTACH')."\n";
-		print "  session links: ".(!empty($_SESSION['rfqimages_links-spro'.$id]) ? $_SESSION['rfqimages_links-spro'.$id] : '(none)')."\n\n";
+foreach (array('proposal' => 'spro', 'order' => 'sord') as $docmode => $prefix) {
+	if (($mode !== $docmode && !$run_all) || $id <= 0) {
+		continue;
 	}
+	$doc = ActionsRfqImages::$documents[$prefix];
+	print "--- ".strtoupper($doc['element'])." id=$id (enabled: ".(ActionsRfqImages::isEnabledFor($prefix) ? 'yes' : 'no').") ---\n";
+	$classname = $doc['class'];
+	$document = new $classname($db);
+	if ($document->fetch($id) <= 0) {
+		print "  fetch failed\n\n";
+		continue;
+	}
+	if (empty($document->lines) && method_exists($document, 'fetch_lines')) {
+		$document->fetch_lines();
+	}
+	$files = $service->collectForDocument($document);
+	$total = 0;
+	foreach ($files as $f) {
+		$total += $f['size'];
+		print "  - ".$f['productref']." / ".$f['name']." (".$f['size'].")\n";
+	}
+	$limit = (float) getDolGlobalString('RFQIMAGES_MAX_ATTACH_MB', '10');
+	print "  total: $total bytes, limit: $limit MB -> ".(($limit > 0 && $total > $limit * 1048576) ? 'LINKS' : 'ATTACH')."\n";
+	$key = ActionsRfqImages::sessionKey($prefix.$id);
+	print "  session links: ".(!empty($_SESSION[$key]) ? $_SESSION[$key] : '(none)')."\n\n";
 }
 
 print "=== END DEBUG ===\n";
