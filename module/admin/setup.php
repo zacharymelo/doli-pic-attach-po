@@ -144,6 +144,7 @@ print '</table>';
 print '</div>';
 
 print '<br>';
+print '<div class="info">'.$langs->trans('RfqImagesTemplateHelp').'</div>';
 
 print '<div class="tabsAction">';
 print '<a class="butAction" href="'.$_SERVER['PHP_SELF'].'?action=repair_extrafield&token='.newToken().'">'.$langs->trans('RfqImagesRepairExtrafield').'</a>';

@@ -1,7 +1,13 @@
 # Changelog
 
+## 1.3.0 — 2026-09-16
+- `__RFQIMAGES_LINKS__` is back and now always works: wherever it appears in a price request or purchase order email, it is replaced with share links when the email is sent. Files are still attached as usual, so a template can include both.
+- The key is listed in the email template editor. In an open email form it stays visible as `__RFQIMAGES_LINKS__` until you send; share links are only created at send.
+- Files too large to attach: links go where the key is, or at the end of the message if there is no key. Their share links are now also created at send instead of when the form opens, so opening an email form never makes files public.
+- **Upgrade:** disable and re-enable the module after deploying.
+
 ## 1.2.0 — 2026-09-16
-- Removed the `__RFQIMAGES_LINKS__` email template key. It was empty whenever files were attached (the normal case), so it looked like it did nothing. When files are too large, share links are always added at the end of the message.
+- Removed the `__RFQIMAGES_LINKS__` email template key. It was empty whenever files were attached (the normal case), so it looked like it did nothing. When files are too large, share links are always added at the end of the message. (Reinstated in 1.3.0.)
 - Removed the "Append links automatically" setting: with the key gone, turning it off would have made files public without sending the links. The old setting is deleted on re-enable.
 - **Upgrade:** disable and re-enable the module after deploying. If you added `__RFQIMAGES_LINKS__` to an email template, remove it from the template.
 

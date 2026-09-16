@@ -21,6 +21,9 @@ require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
  */
 class RfqImagesService
 {
+	/** Email template key replaced with share links when the email is sent */
+	const LINKS_KEY = '__RFQIMAGES_LINKS__';
+
 	/** @var DoliDB */
 	public $db;
 
@@ -315,6 +318,25 @@ class RfqImagesService
 			}
 		}
 		return self::publicRoot().'/document.php?hashp='.urlencode($ecm->share);
+	}
+
+	/**
+	 * Share links for a set of files, creating share hashes where missing
+	 *
+	 * @param  array<int,array{fullpath:string,name:string,productref:string}> $files Files
+	 * @param  User                                                          $user  Current user
+	 * @return array<int,array{name:string,productref:string,url:string}>
+	 */
+	public function buildShareLinks($files, $user)
+	{
+		$links = array();
+		foreach ($files as $f) {
+			$url = $this->getShareUrl($f['fullpath'], $user);
+			if ($url) {
+				$links[] = array('name' => $f['name'], 'productref' => $f['productref'], 'url' => $url);
+			}
+		}
+		return $links;
 	}
 
 	/**

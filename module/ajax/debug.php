@@ -81,6 +81,7 @@ if ($mode === 'overview' || $run_all) {
 		}
 		print "  $ctx: ".($found ? 'registered' : 'NOT registered (re-enable module)')."\n";
 	}
+	print "  substitutions: ".(in_array('/rfqimages/core/substitutions/', (array) $conf->modules_parts['substitutions']) ? 'registered' : 'NOT registered (re-enable module)')."\n";
 
 	print "\n--- TABLE ---\n";
 	$resql = $db->query("SELECT COUNT(rowid) as cnt FROM ".MAIN_DB_PREFIX."rfqimages_file");
@@ -149,7 +150,7 @@ foreach (array('proposal' => 'spro', 'order' => 'sord') as $docmode => $prefix) 
 	$limit = (float) getDolGlobalString('RFQIMAGES_MAX_ATTACH_MB', '10');
 	print "  total: $total bytes, limit: $limit MB -> ".(($limit > 0 && $total > $limit * 1048576) ? 'LINKS' : 'ATTACH')."\n";
 	$key = ActionsRfqImages::sessionKey($prefix.$id);
-	print "  session links: ".(!empty($_SESSION[$key]) ? $_SESSION[$key] : '(none)')."\n\n";
+	print "  session (too large flag): ".(!empty($_SESSION[$key]) ? $_SESSION[$key] : '(none)')."\n\n";
 }
 
 print "=== END DEBUG ===\n";

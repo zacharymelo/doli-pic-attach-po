@@ -35,12 +35,13 @@ class modRfqImages extends DolibarrModules
 
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
 		$this->description = 'Attach (or link) flagged product images when emailing vendor price requests and purchase orders';
-		$this->version = '1.2.0';
+		$this->version = '1.3.0';
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 		$this->picto = 'image';
 
 		$this->module_parts = array(
 			'triggers' => 0,
+			'substitutions' => 1,
 			'hooks' => array('data' => array('formmail', 'supplier_proposalcard', 'ordersuppliercard'), 'entity' => '0'),
 		);
 
@@ -93,11 +94,9 @@ class modRfqImages extends DolibarrModules
 			return -1;
 		}
 
-		// Removed in 1.2.0: the __RFQIMAGES_LINKS__ substitution and its auto-append setting.
-		// _remove() only clears module parts still declared, so drop the leftovers explicitly.
+		// Setting removed in 1.2.0 (links are always appended when files are too large)
 		require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 		dolibarr_del_const($this->db, 'RFQIMAGES_AUTO_APPEND_LINKS', $conf->entity);
-		dolibarr_del_const($this->db, 'MAIN_MODULE_RFQIMAGES_SUBSTITUTIONS', $conf->entity);
 
 		dol_include_once('/rfqimages/lib/rfqimages.lib.php');
 		if (rfqimages_ensure_extrafields($this->db) < 0) {

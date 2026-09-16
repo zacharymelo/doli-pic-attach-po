@@ -77,6 +77,22 @@ class ActionsRfqImages
 	}
 
 	/**
+	 * Trackid prefix for an element ('supplier_proposal' => 'spro'), '' if unsupported
+	 *
+	 * @param  string $element Object element
+	 * @return string
+	 */
+	public static function prefixForElement($element)
+	{
+		foreach (self::$documents as $prefix => $doc) {
+			if ($doc['element'] === $element) {
+				return $prefix;
+			}
+		}
+		return '';
+	}
+
+	/**
 	 * Whether sending images is enabled for a document type (on unless switched off in setup)
 	 *
 	 * @param  string $prefix Trackid prefix
@@ -177,17 +193,9 @@ class ActionsRfqImages
 				setEventMessages($langs->trans('RfqImagesAttached', $n), null, 'mesgs');
 			}
 		} else {
-			$links = array();
-			foreach ($files as $f) {
-				$url = $service->getShareUrl($f['fullpath'], $user);
-				if ($url) {
-					$links[] = array('name' => $f['name'], 'productref' => $f['productref'], 'url' => $url);
-				}
-			}
-			if ($links) {
-				$_SESSION[self::sessionKey($trackid)] = json_encode(array('links' => $links));
-				setEventMessages($langs->trans('RfqImagesLinked', count($links), dol_print_size($total, 1)), null, 'warnings');
-			}
+			// Links are created when the email is sent (doActions), never while the form is only open
+			$_SESSION[self::sessionKey($trackid)] = json_encode(array('toolarge' => 1));
+			setEventMessages($langs->trans('RfqImagesLinked', count($files), dol_print_size($total, 1)), null, 'warnings');
 		}
 
 		if ($service->errors) {
@@ -198,8 +206,10 @@ class ActionsRfqImages
 	}
 
 	/**
-	 * On price request / purchase order cards, before core sends the email:
-	 * append the share links prepared when the form was opened
+	 * On price request / purchase order cards, before core sends the email, add share links:
+	 * - in place of __RFQIMAGES_LINKS__ when the message contains it (files stay attached too)
+	 * - at the end of the message when the files were too large to attach and there is no key
+	 * Share hashes are only created here, so opening an email form never makes files public.
 	 *
 	 * @param  array<string,mixed> $parameters Hook parameters
 	 * @param  CommonObject        $object     SupplierProposal or CommandeFournisseur
@@ -209,6 +219,8 @@ class ActionsRfqImages
 	 */
 	public function doActions($parameters, &$object, &$action, $hookmanager)
 	{
+		global $user, $langs;
+
 		if (!isModEnabled('rfqimages')) {
 			return 0;
 		}
@@ -230,28 +242,40 @@ class ActionsRfqImages
 			return 0;
 		}
 
-		$key = self::sessionKey($prefix.$object->id);
-		if (empty($_SESSION[$key])) {
-			return 0;
-		}
-		$data = json_decode($_SESSION[$key], true);
-		unset($_SESSION[$key]);
-
-		if (empty($data['links'])) {
-			return 0;
-		}
-
 		dol_include_once('/rfqimages/class/rfqimagesservice.class.php');
 
+		$key = self::sessionKey($prefix.$object->id);
+		$data = empty($_SESSION[$key]) ? array() : json_decode($_SESSION[$key], true);
+		unset($_SESSION[$key]);
+
 		$message = isset($_POST['message']) ? (string) $_POST['message'] : '';
-		// Already present (e.g. pasted by the user)
-		if (strpos($message, $data['links'][0]['url']) !== false || strpos($message, dol_escape_htmltag($data['links'][0]['url'])) !== false) {
+		$haskey = (strpos($message, RfqImagesService::LINKS_KEY) !== false);
+		if (!$haskey && empty($data['toolarge'])) {
 			return 0;
+		}
+
+		$links = array();
+		if (self::isEnabledFor($prefix) && self::userCanRead($prefix, $user)) {
+			if (empty($object->lines) && method_exists($object, 'fetch_lines')) {
+				$object->fetch_lines();
+			}
+			$service = new RfqImagesService($this->db);
+			$links = $service->buildShareLinks($service->collectForDocument($object), $user);
+			if ($service->errors) {
+				$langs->load('rfqimages@rfqimages');
+				setEventMessages($langs->trans('RfqImagesSomeFailed'), $service->errors, 'errors');
+			}
 		}
 
 		$html = dol_textishtml($message);
-		$block = RfqImagesService::buildLinksBlock($data['links'], $html);
-		$_POST['message'] = $message.($html ? '<br>'.$block : "\n\n".$block);
+		$block = RfqImagesService::buildLinksBlock($links, $html);
+		if ($haskey) {
+			// In HTML, replace a paragraph holding only the key so the block is not nested in a <p>
+			$message = preg_replace('#<p>\s*'.preg_quote(RfqImagesService::LINKS_KEY, '#').'\s*</p>#i', $block, $message);
+			$_POST['message'] = str_replace(RfqImagesService::LINKS_KEY, $block, $message);
+		} elseif ($block !== '') {
+			$_POST['message'] = $message.($html ? '<br>'.$block : "\n\n".$block);
+		}
 
 		return 0;
 	}

@@ -6,7 +6,8 @@ Sends product images (and other chosen files) along with vendor **price requests
 1. On a product, open the **Vendor email images** tab and turn on **Send images to vendors**. Untick any files that should not go out. New uploads are included by default.
 2. On a price request or purchase order, click **Send by email**. The files of every flagged product on its lines are attached, named `<product ref>_<file>`.
 3. If the total size is above the limit in setup (default 10 MB), nothing is attached. Instead, a public share link is created for each of those files only and added at the end of the message when it is sent.
-4. Public links can be revoked per file from the product tab.
+4. **Links as well as attachments:** put `__RFQIMAGES_LINKS__` in an email template (or type it in the message). When the email is sent, it is replaced with share links to the same files, and the files are still attached. Links are only created at send, so just opening the form never makes files public.
+5. Public links can be revoked per file from the product tab.
 
 Other product files remain private.
 
