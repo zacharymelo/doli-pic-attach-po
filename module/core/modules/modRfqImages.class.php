@@ -1,0 +1,114 @@
+<?php
+/* Copyright (C) 2026 Digital Properties Works
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ */
+
+/**
+ * \file    core/modules/modRfqImages.class.php
+ * \ingroup rfqimages
+ * \brief   Descriptor for the RfqImages module: send flagged product images with price requests
+ */
+
+include_once DOL_DOCUMENT_ROOT.'/core/modules/DolibarrModules.class.php';
+
+/**
+ * Module descriptor
+ */
+class modRfqImages extends DolibarrModules
+{
+	/**
+	 * Constructor. Define names, constants, directories, boxes, permissions
+	 *
+	 * @param DoliDB $db Database handler
+	 */
+	public function __construct($db)
+	{
+		$this->db = $db;
+
+		$this->numero = 510410;
+		$this->family = 'products';
+		$this->module_position = '50';
+
+		$this->name = preg_replace('/^mod/i', '', get_class($this));
+		$this->description = 'Attach (or link) flagged product images when emailing vendor price requests';
+		$this->version = '1.0.0';
+		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
+		$this->picto = 'image';
+
+		$this->module_parts = array(
+			'triggers' => 0,
+			'substitutions' => 1,
+			'hooks' => array('data' => array('formmail', 'supplier_proposalcard'), 'entity' => '0'),
+		);
+
+		$this->dirs = array('/rfqimages/temp');
+
+		$this->config_page_url = array('setup.php@rfqimages');
+
+		$this->hidden = false;
+		$this->depends = array('modProduct', 'modSupplierProposal');
+		$this->requiredby = array();
+		$this->conflictwith = array();
+		$this->langfiles = array('rfqimages@rfqimages');
+		$this->phpmin = array(7, 1);
+		$this->need_dolibarr_version = array(16, 0);
+
+		$this->const = array(
+			array('RFQIMAGES_EXTENSIONS', 'chaine', 'jpg,jpeg,png,gif,webp', 'File extensions sent with price requests', 0, 'current', 0),
+			array('RFQIMAGES_MAX_ATTACH_MB', 'chaine', '10', 'Above this total size (MB), share links are used instead of attachments', 0, 'current', 0),
+			array('RFQIMAGES_AUTO_APPEND_LINKS', 'chaine', '1', 'Append links to the message when the template has no __RFQIMAGES_LINKS__ key', 0, 'current', 0),
+		);
+
+		$this->tabs = array();
+		$this->tabs[] = array('data' => 'product:+rfqimages:RfqImagesTab:rfqimages@rfqimages:$user->hasRight(\'produit\', \'lire\') || $user->hasRight(\'service\', \'lire\'):/rfqimages/product_images.php?id=__ID__');
+
+		$this->dictionaries = array();
+		$this->boxes = array();
+		$this->cronjobs = array();
+
+		// Uses core product / supplier_proposal permissions
+		$this->rights = array();
+		$this->rights_class = 'rfqimages';
+
+		$this->menu = array();
+	}
+
+	/**
+	 * Called when module is enabled
+	 *
+	 * @param  string $options Options when enabling module ('', 'noboxes')
+	 * @return int             1 if OK, 0 if KO
+	 */
+	public function init($options = '')
+	{
+		$result = $this->_load_tables('/rfqimages/sql/');
+		if ($result < 0) {
+			return -1;
+		}
+
+		dol_include_once('/rfqimages/lib/rfqimages.lib.php');
+		if (rfqimages_ensure_extrafields($this->db) < 0) {
+			$this->error = 'Failed to create product extrafield rfqimages_send';
+			return -1;
+		}
+
+		$this->delete_menus();
+
+		return $this->_init(array(), $options);
+	}
+
+	/**
+	 * Called when module is disabled. Tables and extrafield data are kept.
+	 *
+	 * @param  string $options Options when disabling module ('', 'noboxes')
+	 * @return int             1 if OK, 0 if KO
+	 */
+	public function remove($options = '')
+	{
+		return $this->_remove(array(), $options);
+	}
+}

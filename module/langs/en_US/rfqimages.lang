@@ -1,0 +1,37 @@
+# Module
+Module510410Name = RFQ Product Images
+Module510410Desc = Attach (or link) flagged product images when emailing vendor price requests
+
+# Product extrafield / tab
+RfqImagesTab = Price request images
+RfqImagesSend = Send images with price requests
+RfqImagesSendHelp = When enabled, this product's selected image files are attached to price request emails (or sent as share links when too large).
+RfqImagesNotFlagged = This product is not flagged: none of these files are sent. Turn on "Send images with price requests" above.
+RfqImagesInclude = Include
+RfqImagesShareStatus = Public link
+RfqImagesShared = Shared
+RfqImagesPrivate = Private
+RfqImagesRevoke = Revoke public link
+RfqImagesShareRevoked = Public link removed for %s
+RfqImagesNoFiles = No matching files in this product's Documents tab.
+
+# Email form
+RfqImagesAttached = %s product image(s) attached
+RfqImagesLinked = %s product image(s) sent as share links in the message: too large to attach (total %s)
+RfqImagesSomeFailed = Some product images could not be added
+RfqImagesLinksTitle = Product images:
+
+# Setup
+RfqImagesSetup = RFQ Product Images setup
+RfqImagesSetupIntro = Flag products on their "Price request images" tab. When a price request is emailed, the images of flagged products are attached automatically.
+RfqImagesExtensions = File extensions
+RfqImagesExtensionsDesc = Comma-separated list of extensions to send, e.g. jpg,jpeg,png,gif,webp,pdf
+RfqImagesMaxAttach = Maximum total attachment size
+RfqImagesMaxAttachDesc = Above this total, public share links are put in the message instead of attachments. 0 = always attach.
+RfqImagesAutoAppend = Append links automatically
+RfqImagesAutoAppendDesc = When links are used and the message does not contain them, add them at the end of the message when sending.
+RfqImagesTemplateHelp = To place the links yourself, add the key __RFQIMAGES_LINKS__ to your price request email template. It is empty when images are attached.
+RfqImagesRepairExtrafield = Recreate product extrafield
+RfqImagesExtrafieldOk = Product extrafield is present
+DebugMode = Debug Mode
+DebugModeDesc = When enabled, exposes a diagnostic endpoint at /custom/rfqimages/ajax/debug.php (admins only).
