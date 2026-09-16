@@ -81,7 +81,6 @@ if ($mode === 'overview' || $run_all) {
 		}
 		print "  $ctx: ".($found ? 'registered' : 'NOT registered (re-enable module)')."\n";
 	}
-	print "  substitutions: ".(in_array('/rfqimages/core/substitutions/', (array) $conf->modules_parts['substitutions']) ? 'registered' : 'NOT registered')."\n";
 
 	print "\n--- TABLE ---\n";
 	$resql = $db->query("SELECT COUNT(rowid) as cnt FROM ".MAIN_DB_PREFIX."rfqimages_file");

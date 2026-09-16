@@ -18,7 +18,7 @@ RfqImagesOtherFiles = %s file(s) not sent because their extension is not in the 
 
 # Email form
 RfqImagesAttached = %s product file(s) attached
-RfqImagesLinked = %s product file(s) sent as share links in the message: too large to attach (total %s)
+RfqImagesLinked = %s product file(s) are too large to attach (total %s): share links will be added at the end of the message when it is sent
 RfqImagesSomeFailed = Some product files could not be added
 RfqImagesLinksTitle = Product files:
 
@@ -33,10 +33,7 @@ RfqImagesSetupIntro = Flag products on their "Vendor email images" tab. When a p
 RfqImagesExtensions = File extensions
 RfqImagesExtensionsDesc = Comma-separated list of extensions to send. PDFs are not included by default: add pdf to send them.
 RfqImagesMaxAttach = Maximum total attachment size
-RfqImagesMaxAttachDesc = Above this total, public share links are put in the message instead of attachments. 0 = always attach.
-RfqImagesAutoAppend = Append links automatically
-RfqImagesAutoAppendDesc = When links are used and the message does not contain them, add them at the end of the message when sending.
-RfqImagesTemplateHelp = To place the links yourself, add the key __RFQIMAGES_LINKS__ to your price request or purchase order email template. It is empty when files are attached.
+RfqImagesMaxAttachDesc = Above this total, public share links are added at the end of the message instead of attachments. 0 = always attach.
 RfqImagesRepairExtrafield = Recreate product extrafield
 RfqImagesExtrafieldOk = Product extrafield is present
 DebugMode = Debug Mode

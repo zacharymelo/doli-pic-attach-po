@@ -135,11 +135,6 @@ print ' <input type="submit" class="button smallpaddingimp" value="'.$langs->tra
 print '</form>';
 print '</td><td class="opacitymedium">'.$langs->trans('RfqImagesMaxAttachDesc').'</td></tr>';
 
-// Auto-append links
-print '<tr class="oddeven"><td>'.$langs->trans('RfqImagesAutoAppend').'</td>';
-print '<td>'.ajax_constantonoff('RFQIMAGES_AUTO_APPEND_LINKS').'</td>';
-print '<td class="opacitymedium">'.$langs->trans('RfqImagesAutoAppendDesc').'</td></tr>';
-
 // Debug mode (always last)
 print '<tr class="oddeven"><td>'.$langs->trans('DebugMode').'</td>';
 print '<td>'.ajax_constantonoff('RFQIMAGES_DEBUG_MODE').'</td>';
@@ -149,7 +144,6 @@ print '</table>';
 print '</div>';
 
 print '<br>';
-print '<div class="info">'.$langs->trans('RfqImagesTemplateHelp').'</div>';
 
 print '<div class="tabsAction">';
 print '<a class="butAction" href="'.$_SERVER['PHP_SELF'].'?action=repair_extrafield&token='.newToken().'">'.$langs->trans('RfqImagesRepairExtrafield').'</a>';

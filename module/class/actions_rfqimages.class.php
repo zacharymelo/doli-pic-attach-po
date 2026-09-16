@@ -77,22 +77,6 @@ class ActionsRfqImages
 	}
 
 	/**
-	 * Trackid prefix for an element ('supplier_proposal' => 'spro'), '' if unsupported
-	 *
-	 * @param  string $element Object element
-	 * @return string
-	 */
-	public static function prefixForElement($element)
-	{
-		foreach (self::$documents as $prefix => $doc) {
-			if ($doc['element'] === $element) {
-				return $prefix;
-			}
-		}
-		return '';
-	}
-
-	/**
 	 * Whether sending images is enabled for a document type (on unless switched off in setup)
 	 *
 	 * @param  string $prefix Trackid prefix
@@ -150,12 +134,8 @@ class ActionsRfqImages
 			return 0;
 		}
 
-		// Fresh form: drop links from an earlier form (card_presend already substituted them before this hook)
+		// Fresh form: drop links prepared by an earlier form
 		unset($_SESSION[self::sessionKey($trackid)]);
-		if (!is_array($object->substit)) {
-			$object->substit = array();
-		}
-		$object->substit['__RFQIMAGES_LINKS__'] = '';
 
 		$doc = self::$documents[$prefix];
 		require_once DOL_DOCUMENT_ROOT.$doc['file'];
@@ -205,9 +185,7 @@ class ActionsRfqImages
 				}
 			}
 			if ($links) {
-				$html = (bool) getDolGlobalInt('FCKEDITOR_ENABLE_MAIL');
 				$_SESSION[self::sessionKey($trackid)] = json_encode(array('links' => $links));
-				$object->substit['__RFQIMAGES_LINKS__'] = RfqImagesService::buildLinksBlock($links, $html);
 				setEventMessages($langs->trans('RfqImagesLinked', count($links), dol_print_size($total, 1)), null, 'warnings');
 			}
 		}
@@ -221,7 +199,7 @@ class ActionsRfqImages
 
 	/**
 	 * On price request / purchase order cards, before core sends the email:
-	 * append the links block if the message does not contain it
+	 * append the share links prepared when the form was opened
 	 *
 	 * @param  array<string,mixed> $parameters Hook parameters
 	 * @param  CommonObject        $object     SupplierProposal or CommandeFournisseur
@@ -259,19 +237,14 @@ class ActionsRfqImages
 		$data = json_decode($_SESSION[$key], true);
 		unset($_SESSION[$key]);
 
-		if (!getDolGlobalInt('RFQIMAGES_AUTO_APPEND_LINKS') || empty($data['links'])) {
+		if (empty($data['links'])) {
 			return 0;
 		}
 
 		dol_include_once('/rfqimages/class/rfqimagesservice.class.php');
 
 		$message = isset($_POST['message']) ? (string) $_POST['message'] : '';
-		if (strpos($message, '__RFQIMAGES_LINKS__') !== false) {
-			// Keep the data for the substitution function at send time
-			$_SESSION[$key] = json_encode($data);
-			return 0;
-		}
-		// Already present: the template used __RFQIMAGES_LINKS__ and it was substituted in the form
+		// Already present (e.g. pasted by the user)
 		if (strpos($message, $data['links'][0]['url']) !== false || strpos($message, dol_escape_htmltag($data['links'][0]['url'])) !== false) {
 			return 0;
 		}

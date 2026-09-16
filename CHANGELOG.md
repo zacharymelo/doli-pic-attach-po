@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0 — 2026-09-16
+- Removed the `__RFQIMAGES_LINKS__` email template key. It was empty whenever files were attached (the normal case), so it looked like it did nothing. When files are too large, share links are always added at the end of the message.
+- Removed the "Append links automatically" setting: with the key gone, turning it off would have made files public without sending the links. The old setting is deleted on re-enable.
+- **Upgrade:** disable and re-enable the module after deploying. If you added `__RFQIMAGES_LINKS__` to an email template, remove it from the template.
+
 ## 1.1.1 — 2026-09-16
 - Removed the workaround for the core price request Cancel redirect (`/supplier_proposal/3D<id>`). It is unrelated to this module and is being fixed in Dolibarr core instead.
 
