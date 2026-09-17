@@ -35,7 +35,7 @@ class modRfqImages extends DolibarrModules
 
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
 		$this->description = 'Attach (or link) flagged product images when emailing vendor price requests and purchase orders';
-		$this->version = '1.5.0';
+		$this->version = '1.5.1';
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 		$this->picto = 'image';
 

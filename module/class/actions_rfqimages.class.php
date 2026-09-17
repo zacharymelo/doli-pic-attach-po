@@ -77,6 +77,30 @@ class ActionsRfqImages
 	}
 
 	/**
+	 * Whether this request actually sends the email. The email form posts action=send for every
+	 * button (apply template, add/remove attachment...); core only sends without those (actions_sendmails.inc.php).
+	 *
+	 * @return bool
+	 */
+	public static function isRealSend()
+	{
+		return GETPOST('action', 'aZ09') === 'send'
+			&& !GETPOST('addfile') && !GETPOST('removedfile') && !GETPOST('removeAll') && !GETPOST('cancel') && !GETPOST('modelselected');
+	}
+
+	/**
+	 * Whether the email form is (re)building its attachment list: first opening, or a template applied.
+	 * Same condition FormMail::get_form() uses to clear attachments, so our files come back each time.
+	 *
+	 * @return bool
+	 */
+	public static function isAttachmentReset()
+	{
+		return GETPOST('mode', 'alpha') === 'init'
+			|| (GETPOST('modelselected') && GETPOST('modelmailselected', 'alpha') && GETPOST('modelmailselected', 'alpha') != '-1');
+	}
+
+	/**
 	 * Trackid prefix for an element ('supplier_proposal' => 'spro'), '' if unsupported
 	 *
 	 * @param  string $element Object element
@@ -123,7 +147,7 @@ class ActionsRfqImages
 
 	/**
 	 * Called by FormMail::get_form() after attachments are cleared and before they are listed.
-	 * On a fresh form (mode=init) for a price request or purchase order, attaches flagged product
+	 * When the form is opened or a template is applied, for a price request or purchase order, attaches flagged product
 	 * images, or prepares share links when they are too large.
 	 *
 	 * @param  array<string,mixed> $parameters Hook parameters (trackid, ...)
@@ -136,7 +160,7 @@ class ActionsRfqImages
 	{
 		global $user, $langs;
 
-		if (!isModEnabled('rfqimages') || GETPOST('mode', 'alpha') !== 'init') {
+		if (!isModEnabled('rfqimages') || !self::isAttachmentReset()) {
 			return 0;
 		}
 		$trackid = isset($parameters['trackid']) ? (string) $parameters['trackid'] : '';
@@ -150,7 +174,7 @@ class ActionsRfqImages
 			return 0;
 		}
 
-		// Fresh form: drop links prepared by an earlier form
+		// Form (re)built: drop the too-large flag from an earlier form
 		unset($_SESSION[self::sessionKey($trackid)]);
 
 		$doc = self::$documents[$prefix];
@@ -248,7 +272,7 @@ class ActionsRfqImages
 			return 0;
 		}
 		// Only the real send, not add/remove attachment or template reloads
-		if (GETPOST('addfile') || GETPOST('removedfile') || GETPOST('removeAll') || GETPOST('cancel') || GETPOST('modelselected')) {
+		if (!self::isRealSend()) {
 			return 0;
 		}
 

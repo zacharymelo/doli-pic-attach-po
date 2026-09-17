@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.5.1 — 2026-09-17
+- Fix: applying an email template from the template dropdown in the email form removed `__RFQIMAGES_LINKS__` from the message and dropped the product file attachments. The dropdown reloads the form with `action=send`, which was mistaken for sending. The key now stays until the email is really sent, and the product files are attached again after a template is applied (core clears attachments at that point).
+
 ## 1.5.0 — 2026-09-17
 - The product settings moved from the separate "Vendor email images" tab into a **Vendor email images** section at the bottom of the product's **Documents** tab, below the linked files. Same controls: send switch, Include checkboxes, share link status and revoke.
 - The old tab and its page (`product_images.php`) are removed.

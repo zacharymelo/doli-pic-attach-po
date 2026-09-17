@@ -44,7 +44,8 @@ function rfqimages_completesubstitutionarray(&$substitutionarray, $outputlangs, 
 	}
 
 	$prefix = empty($object->element) ? '' : ActionsRfqImages::prefixForElement($object->element);
-	if ($prefix !== '' && ActionsRfqImages::isEnabledFor($prefix) && GETPOST('action', 'aZ09') !== 'send') {
+	// Keep the key through form reloads (applying a template also posts action=send); it is replaced on the real send
+	if ($prefix !== '' && ActionsRfqImages::isEnabledFor($prefix) && !ActionsRfqImages::isRealSend()) {
 		$substitutionarray[$key] = $key;
 	}
 }
