@@ -2,19 +2,19 @@
 Module510410Name = Vendor Product Images
 Module510410Desc = Attach (or link) flagged product images when emailing vendor price requests and purchase orders
 
-# Product extrafield / tab
-RfqImagesTab = Vendor email images
+# Product Documents tab section
+RfqImagesSection = Vendor email images
 RfqImagesSend = Send images to vendors
 RfqImagesSendHelp = When enabled, this product's selected files are attached to price request and purchase order emails (or sent as share links when too large).
 RfqImagesFlaggedByCategory = (sent anyway: product is in category %s, selected in setup)
-RfqImagesNotFlagged = This product is not flagged: none of these files are sent. Turn on "Send images to vendors" above.
+RfqImagesNotFlagged = This product is not flagged: none of these files are sent. Turn on "Send images to vendors" above, or select its category in the module setup.
 RfqImagesInclude = Include
 RfqImagesShareStatus = Public link
 RfqImagesShared = Shared
 RfqImagesPrivate = Private
 RfqImagesRevoke = Revoke public link
 RfqImagesShareRevoked = Public link removed for %s
-RfqImagesNoFiles = No matching files in this product's Documents tab.
+RfqImagesNoFiles = No linked files of the file types chosen in the module setup.
 RfqImagesOtherFiles = %s file(s) not sent because their extension is not in the setup list: %s
 
 # Email form
@@ -44,7 +44,7 @@ RfqImagesOnSupplierOrder = Purchase orders
 RfqImagesOnSupplierOrderDesc = Add product files when emailing a purchase order
 RfqImagesModuleOff = (module not enabled)
 RfqImagesSetup = Vendor Product Images setup
-RfqImagesSetupIntro = Flag products on their "Vendor email images" tab. When a price request or purchase order is emailed, the files of flagged products are attached automatically.
+RfqImagesSetupIntro = Flag products in the "Vendor email images" section of their Documents tab, or by category below. When a price request or purchase order is emailed, the files of flagged products are attached automatically.
 RfqImagesExtensions = File extensions
 RfqImagesExtensionsDesc = File types to send. Pick common ones from the list, or type any other extensions (e.g. sldprt, ai) in the second box. PDFs are not included by default.
 RfqImagesExtensionsPick = Choose file types
@@ -56,10 +56,10 @@ RfqImagesExtGroupCad = CAD / 3D
 RfqImagesExtGroupArchives = archive
 RfqImagesCategories = Send for product categories
 RfqImagesCategoriesPick = Choose categories
-RfqImagesCategoriesDesc = Products in these categories (or their subcategories) are sent as if their own switch was on. Unticked files on the product tab are still left out.
+RfqImagesCategoriesDesc = Products in these categories (or their subcategories) are sent as if their own switch was on. Files unticked on a product's Documents tab are still left out.
 RfqImagesCategoriesModuleOff = Enable the Categories module to use this.
 RfqImagesNewFilesIncluded = Include new files
-RfqImagesNewFilesIncludedDesc = On: files never ticked or unticked on a product's tab are sent (so new uploads go out automatically). Off: they are left out until ticked. Files you already ticked or unticked keep your choice.
+RfqImagesNewFilesIncludedDesc = On: files never ticked or unticked on a product's Documents tab are sent (so new uploads go out automatically). Off: they are left out until ticked. Files you already ticked or unticked keep your choice.
 RfqImagesResize = Resize attached images
 RfqImagesResizeDesc = Attach jpg, png and gif images shrunk to this many pixels on their longest side, so more emails stay under the size limit. Share links always point to the original. 0 = attach originals.
 RfqImagesMaxAttach = Maximum total attachment size

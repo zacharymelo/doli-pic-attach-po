@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.0 — 2026-09-17
+- The product settings moved from the separate "Vendor email images" tab into a **Vendor email images** section at the bottom of the product's **Documents** tab, below the linked files. Same controls: send switch, Include checkboxes, share link status and revoke.
+- The old tab and its page (`product_images.php`) are removed.
+- **Upgrade:** disable and re-enable the module after deploying (registers the Documents tab hook and removes the old tab).
+
 ## 1.4.0 — 2026-09-16
 - **File types:** chosen from a list of common image, document, CAD and archive types, plus a box for any other extension (replaces the comma-separated text field).
 - **Send for product categories:** products in selected categories (including subcategories) are sent without switching each product on. The product tab shows when a product is sent because of its category.

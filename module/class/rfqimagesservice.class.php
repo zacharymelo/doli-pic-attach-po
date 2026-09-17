@@ -202,7 +202,7 @@ class RfqImagesService
 		$filter = '\.('.implode('|', array_map('preg_quote', $exts)).')$';
 
 		$choices = $this->getChoices($product->id);
-		// Files never ticked or unticked on the product tab follow the setup default
+		// Files never ticked or unticked on the product Documents tab follow the setup default
 		$default = (getDolGlobalString('RFQIMAGES_NEW_FILES_INCLUDED', '1') === '0') ? 0 : 1;
 
 		$out = array();

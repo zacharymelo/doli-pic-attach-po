@@ -35,14 +35,14 @@ class modRfqImages extends DolibarrModules
 
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
 		$this->description = 'Attach (or link) flagged product images when emailing vendor price requests and purchase orders';
-		$this->version = '1.4.0';
+		$this->version = '1.5.0';
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 		$this->picto = 'image';
 
 		$this->module_parts = array(
 			'triggers' => 0,
 			'substitutions' => 1,
-			'hooks' => array('data' => array('formmail', 'supplier_proposalcard', 'ordersuppliercard'), 'entity' => '0'),
+			'hooks' => array('data' => array('formmail', 'supplier_proposalcard', 'ordersuppliercard', 'productdocuments'), 'entity' => '0'),
 		);
 
 		$this->dirs = array('/rfqimages/temp');
@@ -64,13 +64,13 @@ class modRfqImages extends DolibarrModules
 			array('RFQIMAGES_ON_SUPPLIER_PROPOSAL', 'chaine', '1', 'Send product images with price request emails', 0, 'current', 0),
 			array('RFQIMAGES_ON_SUPPLIER_ORDER', 'chaine', '1', 'Send product images with purchase order emails', 0, 'current', 0),
 			array('RFQIMAGES_LINKS_SHOW_TITLE', 'chaine', '1', 'Show a heading above share links', 0, 'current', 0),
-			array('RFQIMAGES_NEW_FILES_INCLUDED', 'chaine', '1', 'Files not ticked or unticked on the product tab are sent', 0, 'current', 0),
+			array('RFQIMAGES_NEW_FILES_INCLUDED', 'chaine', '1', 'Files not ticked or unticked on the product Documents tab are sent', 0, 'current', 0),
 			array('RFQIMAGES_RESIZE_MAX_PX', 'chaine', '0', 'Attach images resized to this many pixels on the longest side (0 = originals)', 0, 'current', 0),
 			array('RFQIMAGES_SHARE_EXPIRE_DAYS', 'chaine', '0', 'Remove share links created by the module after this many days (0 = never)', 0, 'current', 0),
 		);
 
+		// Product settings live in a section of the product's Documents tab (hook productdocuments)
 		$this->tabs = array();
-		$this->tabs[] = array('data' => 'product:+rfqimages:RfqImagesTab:rfqimages@rfqimages:$user->hasRight(\'produit\', \'lire\') || $user->hasRight(\'service\', \'lire\'):/rfqimages/product_images.php?id=__ID__');
 
 		$this->dictionaries = array();
 		$this->boxes = array();

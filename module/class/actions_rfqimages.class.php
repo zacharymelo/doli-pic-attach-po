@@ -210,6 +210,7 @@ class ActionsRfqImages
 	}
 
 	/**
+	 * On the product Documents tab: handle the "Vendor email images" section actions.
 	 * On price request / purchase order cards, before core sends the email, add share links:
 	 * - in place of __RFQIMAGES_LINKS__ when the message contains it (files stay attached too)
 	 * - at the end of the message when the files were too large to attach and there is no key
@@ -228,10 +229,15 @@ class ActionsRfqImages
 		if (!isModEnabled('rfqimages')) {
 			return 0;
 		}
+		$contexts = explode(':', isset($parameters['context']) ? $parameters['context'] : '');
+
+		if (in_array('productdocuments', $contexts) && strpos((string) $action, 'rfqimages_') === 0) {
+			return $this->doProductDocumentsActions($object, $action);
+		}
+
 		if ($action !== 'send' || empty($object->id)) {
 			return 0;
 		}
-		$contexts = explode(':', isset($parameters['context']) ? $parameters['context'] : '');
 		$prefix = '';
 		foreach (self::$documents as $p => $doc) {
 			if (in_array($doc['context'], $contexts)) {
@@ -282,5 +288,136 @@ class ActionsRfqImages
 		}
 
 		return 0;
+	}
+
+	/**
+	 * Product Documents tab: add the "Vendor email images" section, below the list of linked files
+	 *
+	 * @param  array<string,mixed> $parameters Hook parameters
+	 * @param  CommonObject        $object     Product
+	 * @param  string              $action     Current action
+	 * @param  HookManager         $hookmanager Hook manager
+	 * @return int                             0
+	 */
+	public function formObjectOptions($parameters, &$object, &$action, $hookmanager)
+	{
+		global $langs, $user, $form;
+
+		$contexts = explode(':', isset($parameters['context']) ? $parameters['context'] : '');
+		if (!isModEnabled('rfqimages') || !in_array('productdocuments', $contexts) || empty($object->id) || $object->element !== 'product') {
+			return 0;
+		}
+
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/images.lib.php';
+		dol_include_once('/rfqimages/class/rfqimagesservice.class.php');
+		$langs->load('rfqimages@rfqimages');
+		if (!is_object($form)) {
+			$form = new Form($this->db);
+		}
+		if (!isset($object->array_options['options_rfqimages_send'])) {
+			$object->fetch_optionals();
+		}
+
+		$service = new RfqImagesService($this->db);
+		$permwrite = self::userCanEditProduct($object, $user);
+		$self = DOL_URL_ROOT.'/product/document.php?id='.((int) $object->id);
+
+		ob_start();
+		include dol_buildpath('/rfqimages/tpl/product_documents_panel.tpl.php', 0);
+		$html = ob_get_clean();
+
+		// The Documents tab prints hook output above the upload form and file list:
+		// render hidden, then move it to the end of the tab once the page is loaded.
+		$this->resprints = '<div id="rfqimages-panel-relocate" style="display:none;">'.$html.'</div>'
+			.'<script>
+			document.addEventListener("DOMContentLoaded", function () {
+				var wrap = document.getElementById("rfqimages-panel-relocate");
+				if (!wrap) { return; }
+				var fiche = document.querySelector("div.fiche");
+				if (fiche) { fiche.appendChild(wrap); }
+				wrap.style.display = "";
+			});
+			</script>';
+
+		return 0;
+	}
+
+	/**
+	 * Whether the user may change a product's vendor email settings
+	 *
+	 * @param  Product $product Product
+	 * @param  User    $user    User
+	 * @return bool
+	 */
+	public static function userCanEditProduct($product, $user)
+	{
+		return (bool) ($product->type == Product::TYPE_SERVICE ? $user->hasRight('service', 'creer') : $user->hasRight('produit', 'creer'));
+	}
+
+	/**
+	 * Actions of the "Vendor email images" section (switch, include choices, revoke link).
+	 * Always redirects back to the Documents tab.
+	 *
+	 * @param  Product $object Product
+	 * @param  string  $action rfqimages_setflag | rfqimages_savechoices | rfqimages_revokeshare
+	 * @return int             0 when not handled
+	 */
+	private function doProductDocumentsActions($object, $action)
+	{
+		global $langs, $user;
+
+		if (empty($object->id) || $object->element !== 'product') {
+			return 0;
+		}
+		dol_include_once('/rfqimages/class/rfqimagesservice.class.php');
+		$langs->load('rfqimages@rfqimages');
+		$self = DOL_URL_ROOT.'/product/document.php?id='.((int) $object->id);
+
+		if (!self::userCanEditProduct($object, $user)) {
+			setEventMessages($langs->trans('NotEnoughPermissions'), null, 'errors');
+			header('Location: '.$self);
+			exit;
+		}
+
+		$service = new RfqImagesService($this->db);
+		$byname = array();
+		foreach ($service->listCandidateFiles($object) as $f) {
+			$byname[$f['name']] = $f;
+		}
+
+		if ($action === 'rfqimages_setflag') {
+			$object->array_options['options_rfqimages_send'] = GETPOSTINT('value') ? 1 : 0;
+			if ($object->updateExtraField('rfqimages_send', null, $user) < 0) {
+				setEventMessages($object->error, $object->errors, 'errors');
+			} else {
+				setEventMessages($langs->trans('RecordSaved'), null, 'mesgs');
+			}
+		} elseif ($action === 'rfqimages_savechoices') {
+			$picked = GETPOST('rfqimages_include', 'array');
+			$choices = array();
+			foreach ($byname as $name => $f) {
+				$choices[$name] = in_array($name, (array) $picked, true) ? 1 : 0;
+			}
+			if ($service->saveChoices($object->id, $choices) < 0) {
+				setEventMessages($langs->trans('Error'), $service->errors, 'errors');
+			} else {
+				setEventMessages($langs->trans('RecordSaved'), null, 'mesgs');
+			}
+		} elseif ($action === 'rfqimages_revokeshare') {
+			$name = GETPOST('rfqimages_file', 'alphanohtml');
+			if (isset($byname[$name])) {
+				$r = $service->revokeShare($byname[$name]['fullpath'], $user);
+				if ($r < 0) {
+					setEventMessages($langs->trans('Error'), $service->errors, 'errors');
+				} elseif ($r > 0) {
+					setEventMessages($langs->trans('RfqImagesShareRevoked', $name), null, 'mesgs');
+				}
+			}
+		} else {
+			return 0;
+		}
+
+		header('Location: '.$self.'#rfqimages-panel-relocate');
+		exit;
 	}
 }
